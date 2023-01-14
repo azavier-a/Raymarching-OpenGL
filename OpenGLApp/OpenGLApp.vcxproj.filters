@@ -840,10 +840,7 @@
     <ClInclude Include="include\glm\vector_relational.hpp">
       <Filter>include\glm</Filter>
     </ClInclude>
-    <ClInclude Include="src\Window.h">
-      <Filter>src</Filter>
-    </ClInclude>
-    <ClInclude Include="src\GLTemplate.h">
+    <ClInclude Include="time.h">
       <Filter>src</Filter>
     </ClInclude>
   </ItemGroup>
@@ -854,8 +851,16 @@
     <ClCompile Include="src\glad.c">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="src\Window.cpp">
+    <ClCompile Include="time.cpp">
       <Filter>src</Filter>
     </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="screen.vert">
+      <Filter>src</Filter>
+    </None>
+    <None Include="screen.frag">
+      <Filter>src</Filter>
+    </None>
   </ItemGroup>
 </Project>

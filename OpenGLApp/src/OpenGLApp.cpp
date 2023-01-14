@@ -4,6 +4,7 @@
 #include <fstream>
 #include <vector>
 #include <sstream>
+#include "../time.h"
 
 #define EXIT_FAIL() return -1
 #define EXIT_SUCCESS() return 0;
@@ -108,6 +109,9 @@ int main() {
 	glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE); // To make MacOS happy
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
+	std::vector<int> resolution = { 0, 0 };
+	int time = 0;
+
 	GLFWwindow* window;
 	window = glfwCreateWindow(1080, 720, "Ray Marching", NULL, NULL);
 	if (window == NULL) {
@@ -140,8 +144,19 @@ int main() {
 	glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(vertex_buffer_data), vertex_buffer_data, GL_STATIC_DRAW);
 
+	GLuint screen = LoadShaders("screen.vert", "screen.frag");
+
+	glUseProgram(screen);
+
+	auto epoch = currentTimeMillis();
 	do {
-		glClear(GL_COLOR_BUFFER_BIT);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+		glfwGetWindowSize(window, &resolution[0], &resolution[1]);
+		glUniform2f(0, resolution[0], resolution[1]);
+
+		time = int(currentTimeMillis() - epoch); \
+		glUniform1i(1, time);
 
 		glEnableVertexAttribArray(0);
 		glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer);
