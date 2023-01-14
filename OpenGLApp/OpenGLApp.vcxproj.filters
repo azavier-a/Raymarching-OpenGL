@@ -840,12 +840,21 @@
     <ClInclude Include="include\glm\vector_relational.hpp">
       <Filter>include\glm</Filter>
     </ClInclude>
+    <ClInclude Include="src\Window.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="src\GLTemplate.h">
+      <Filter>src</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\OpenGLApp.cpp">
       <Filter>src</Filter>
     </ClCompile>
     <ClCompile Include="src\glad.c">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Window.cpp">
       <Filter>src</Filter>
     </ClCompile>
   </ItemGroup>
