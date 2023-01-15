@@ -92,11 +92,13 @@ float[2] SceneDistance(in vec3 p) {
 	}
 
 	p.xz *= rotationMatrix(time/700.);
+	p.x = abs(p.x);
+
 	vec3 torusPos = p-vec3(0, 1, 2);
 	torusPos.y += osc;
 	torusPos.xy *= rotationMatrix(PI/2);
-	//rboxPos.xy *= rotationMatrix(time/700.);
-	//rboxPos.zy *= rotationMatrix(time/400.);
+	torusPos.y = abs(torusPos.y);
+
 	float torus = SignedSphereDistance(torusPos, 0.05);
 	if(torus < data[0]) {
 		data[0] = torus;
@@ -222,7 +224,7 @@ vec3 LookAt(in vec3 ro, in vec3 foc){
 }
 vec3 PixelColor() {
 	vec3 pixelColor = vec3(0);
-	vec3 ro = vec3(4, 1, 0);
+	vec3 ro = vec3(4, 0.1, 0);
 	vec3 foc = vec3(0, 1, 0);
 
 	float[2] hit; // 0: hit distance (-1 if no hit)  1: materialID
