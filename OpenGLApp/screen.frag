@@ -66,15 +66,16 @@ float SignedTorusDistance(vec3 p, float r1, float r2) { return length(vec2(lengt
 float[2] SceneDistance(in vec3 p) {
 	float[2] data = float[](FAR_PLANE, 0);
 
-	float ground = p.y;
+	/*
+	float ground = p.y+1.;
 	if(ground < data[0]) {
 		data[0] = ground;
 		data[1] = 1.;
-	}
+	}*/
 
 	float osc = 0.5*sin(time*TAU/2500.);
 
-	vec3 rboxPos = p-vec3(0, 1.5, 0);
+	vec3 rboxPos = p-vec3(0, 1, 0);
 	rboxPos.y += osc;
 	rboxPos.xy *= rotationMatrix(time/700.);
 	rboxPos.zy *= rotationMatrix(time/400.);
@@ -92,7 +93,7 @@ float[2] SceneDistance(in vec3 p) {
 	}
 
 	p.xz *= rotationMatrix(time/700.);
-	vec3 torusPos = p-vec3(0, 1.5, 2);
+	vec3 torusPos = p-vec3(0, 1, 2);
 	torusPos.y += osc;
 	torusPos.xy *= rotationMatrix(PI/2);
 	//rboxPos.xy *= rotationMatrix(time/700.);
@@ -150,6 +151,7 @@ void getTexelColor(inout vec3 albedo, in float[2] hit, in vec3 ro, in vec3 rd) {
 	vec3 point = ro + rd*hit[0];
 	switch(int(hit[1])) {
 		case 0:
+			rd.xz *= rotationMatrix(time/5000.);
 			albedo = rd+0.5;
 			break;
 		case 1:
