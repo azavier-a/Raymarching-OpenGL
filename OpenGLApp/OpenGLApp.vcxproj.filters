@@ -22,6 +22,9 @@
     <Filter Include="src">
       <UniqueIdentifier>{2DAB880B-99B4-887C-2230-9F7C8E38947C}</UniqueIdentifier>
     </Filter>
+    <Filter Include="images">
+      <UniqueIdentifier>{02555e03-454e-4124-844d-124bb753c845}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\glm\common.hpp">
@@ -843,6 +846,9 @@
     <ClInclude Include="time.h">
       <Filter>src</Filter>
     </ClInclude>
+    <ClInclude Include="stb_image.h">
+      <Filter>src</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\OpenGLApp.cpp">
@@ -862,5 +868,25 @@
     <None Include="screen.frag">
       <Filter>src</Filter>
     </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="back.jpg">
+      <Filter>images</Filter>
+    </Image>
+    <Image Include="bottom.jpg">
+      <Filter>images</Filter>
+    </Image>
+    <Image Include="front.jpg">
+      <Filter>images</Filter>
+    </Image>
+    <Image Include="left.jpg">
+      <Filter>images</Filter>
+    </Image>
+    <Image Include="right.jpg">
+      <Filter>images</Filter>
+    </Image>
+    <Image Include="top.jpg">
+      <Filter>images</Filter>
+    </Image>
   </ItemGroup>
 </Project>

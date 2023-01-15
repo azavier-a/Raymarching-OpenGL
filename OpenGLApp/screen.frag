@@ -14,6 +14,10 @@
 
 #define SPECULAR_FALLOFF 40.
 
+#define REFLECTIONS 1
+
+#define AO_SAMPLES 3.
+
 #define PI 3.141592
 #define TAU 6.283184
 
@@ -30,8 +34,8 @@ struct Material {
 	float metallicity;
 	float emissive;
 } materials[] = Material[](
-	Material(vec3(1, 0.6, 0.2), 1., 0., 0.),
-	Material(vec3(0.7), 0., 1., 0.),
+	Material(vec3(1), 1., 1., 0.),
+	Material(vec3(1), 0., 1., 0.02), // Spinny thing
 	Material(vec3(0.6, 0, 0.7), 0., 0., 0.)
 );
 
@@ -40,16 +44,24 @@ struct PointLight {
 	vec4 col;
 	float radius;
 } pointLights[] = PointLight[](
-	PointLight(5.*vec3(-2, 2, 0), vec4(0, 0, 1, 1 ), 100.),
-	PointLight(5.*vec3(2, 2, 2), vec4(1, 0, 0, 1), 100.),
-	PointLight(5.*vec3(1, 2, -2), vec4(0, 1, 0, 1), 100.)
+	PointLight(5.*vec3(sin(PI/3.), 2, cos(PI/3.)), vec4(0, 0, 1, 2), 100.),
+	PointLight(5.*vec3(sin(2.*PI/3.), 2, cos(2.*PI/3.)), vec4(1, 0, 0, 2), 100.),
+	PointLight(5.*vec3(0., 2, 1.), vec4(0, 1, 0, 2), 100.)
 );
+float recipLights = 1./(pointLights.length+1);
 
-float SignedSphereDistance(vec3 position, vec4 sphere) { return length(position - sphere.xyz) - sphere.w; }
+mat2 rotationMatrix(float angle) {
+	float s = sin(angle), c = cos(angle);
+	return mat2(c, -s, s, c);
+}
 
-float SignedBoxDistance(vec3 position, vec3 worldDataP, vec3 worldDataD) { return length(max(abs(position - worldDataP) - worldDataD, vec3(0))); }
+float SignedSphereDistance(vec3 pos, float r) { return length(pos) - r; }
 
-float SignedRoundedBoxDistance(vec3 position, vec3 worldDataP, vec4 worldDataD) { return SignedBoxDistance(position, worldDataP, worldDataD.xyz - worldDataD.w) - worldDataD.w; }
+float SignedBoxDistance(vec3 worldDataP, vec3 worldDataD) { return length(max(abs(worldDataP) - worldDataD, vec3(0))); }
+
+float SignedRoundedBoxDistance(vec3 worldDataP, vec4 worldDataD) { return SignedBoxDistance(worldDataP, worldDataD.xyz - worldDataD.w) - worldDataD.w; }
+
+float SignedTorusDistance(vec3 p, float r1, float r2) { return length(vec2(length(p.xy)-r1,p.z))-r2; }
 
 float[2] SceneDistance(in vec3 p) {
 	float[2] data = float[](FAR_PLANE, 0);
@@ -59,29 +71,56 @@ float[2] SceneDistance(in vec3 p) {
 		data[0] = ground;
 		data[1] = 1.;
 	}
-	
-	float box = SignedBoxDistance(p, vec3(-2, 1.5, 0), vec3(0.2, 0.5, 0.7));
-	if(box < data[0]) {
-		data[0] = box;
-		data[1] = 2.;
-	}
 
-	float rbox = SignedRoundedBoxDistance(p, vec3(0, 1.5, 0), vec4(0.2, 1, 0.7, 0.9));
+	float osc = 0.5*sin(time*TAU/2500.);
+
+	vec3 rboxPos = p-vec3(0, 1.5, 0);
+	rboxPos.y += osc;
+	rboxPos.xy *= rotationMatrix(time/700.);
+	rboxPos.zy *= rotationMatrix(time/400.);
+	//float rbox = SignedRoundedBoxDistance(rboxPos, vec4(0.2, 1, 0.7, 0.6));
+	float rbox = SignedTorusDistance(rboxPos, 0.5, 0.1);
 	if(rbox < data[0]) {
 		data[0] = rbox;
 		data[1] = 2.;
 	}
 
-	
+	rbox = SignedSphereDistance(rboxPos, 0.2);
+	if(rbox < data[0]) {
+		data[0] = rbox;
+		data[1] = 2.;
+	}
+
+	p.xz *= rotationMatrix(time/700.);
+	vec3 torusPos = p-vec3(0, 1.5, 2);
+	torusPos.y += osc;
+	torusPos.xy *= rotationMatrix(PI/2);
+	//rboxPos.xy *= rotationMatrix(time/700.);
+	//rboxPos.zy *= rotationMatrix(time/400.);
+	float torus = SignedSphereDistance(torusPos, 0.05);
+	if(torus < data[0]) {
+		data[0] = torus;
+		data[1] = 2.;
+	}
+	torusPos.zy *= rotationMatrix(time/700.);
+	torusPos.zx *= rotationMatrix(time/200.);
+	torus = SignedTorusDistance(torusPos, 0.15, 0.02);
+	if(torus < data[0]) {
+		data[0] = torus;
+		data[1] = 2.;
+	}
+
 	return data;
 }
 
-vec3 LookAt(in vec3 ro, in vec3 foc){
-  vec3 to = normalize(foc - ro);
-  vec3 r = cross(to, vec3(0, 1, 0));
-  vec3 up = cross(r, to);
-    
-  return normalize((uv.x*r + uv.y*up)*FOV + to);
+vec3 SurfaceNormal(in vec3 point) {
+	vec2 delta = vec2(0.0001, 0);
+	vec3 gradient = vec3(
+		SceneDistance(point - delta.xyy)[0],
+	    SceneDistance(point - delta.yxy)[0],
+	    SceneDistance(point - delta.yyx)[0]
+	);
+  return normalize(SceneDistance(point)[0] - gradient);
 }
 
 void MarchScene(inout float[2] hit, in vec3 ro, in vec3 rd) {
@@ -108,28 +147,32 @@ Material getMaterial(int index) {
 }
 
 void getTexelColor(inout vec3 albedo, in float[2] hit, in vec3 ro, in vec3 rd) {
+	vec3 point = ro + rd*hit[0];
 	switch(int(hit[1])) {
 		case 0:
 			albedo = rd+0.5;
 			break;
 		case 1:
-			vec3 point = ro + rd*hit[0];
-			albedo = getMaterial(1).albedo*(0.5+0.5*ceil(clamp(vec3(sin(2.*point.x)+sin(2.*point.z)), 0., 1.)));
+			point.xz *= rotationMatrix(PI/4.);
+			albedo = getMaterial(1).albedo*(0.5+0.5*ceil(clamp(vec3(sin(1.5*point.x)+sin(1.5*point.z)), 0., 1.)));
 			break;
 		default:
-			albedo = getMaterial(int(hit[1])).albedo;
+			//albedo = getMaterial(int(hit[1])).albedo;
+			albedo = SurfaceNormal(ro + rd*hit[0])+0.5;
 			break;
 	}
  }
 
-vec3 SurfaceNormal(in vec3 point) {
-	vec2 delta = vec2(0.0001, 0);
-	vec3 gradient = vec3(
-		SceneDistance(point - delta.xyy)[0],
-	    SceneDistance(point - delta.yxy)[0],
-	    SceneDistance(point - delta.yyx)[0]
-	);
-  return normalize(SceneDistance(point)[0] - gradient);
+float calculateAO(vec3 p, vec3 n){
+    float r = 0.0, w = 1.0, d;
+    
+    for (float i=1.0; i<AO_SAMPLES+1.1; i++){
+        d = i/AO_SAMPLES;
+        r += w*(d - SceneDistance(p + n*d)[0]);
+        w *= 0.5;
+    }
+    
+    return 1.0-clamp(r,0.0,1.0);
 }
 
 vec3 GlobalIllumination(in float[2] hit, in vec3 ro, in vec3 rd) {
@@ -138,8 +181,10 @@ vec3 GlobalIllumination(in float[2] hit, in vec3 ro, in vec3 rd) {
 
 	Material mat = getMaterial(int(hit[1]));
 
+	float direct_light = 1.;
 	vec3 ambient = AMBIENT_PERCENT, diffuse, specular;
 	for(int i = 0; i < pointLights.length(); i++) {
+		pointLights[i].pos.xz *= rotationMatrix(time*i*TAU/4000);
 		vec3 lightVector = pointLights[i].pos - point;
 		float lightDistance = length(lightVector);
 
@@ -158,27 +203,38 @@ vec3 GlobalIllumination(in float[2] hit, in vec3 ro, in vec3 rd) {
 	}
 	specular = clamp(specular, 0., 1.);
 
+	// fresnel term
+	float fre = pow( clamp(dot(normal, rd) + 1., .0, 1.), 1.);
+
+	float occ = calculateAO(point, normal);
+
 	vec3 global = mat.albedo*(AMBIENT*ambient + DIFFUSE*diffuse + SPECULAR*specular) + EMISSIVE*mat.emissive*mat.albedo;
-	return global;
+	return global*direct_light*fre*occ;
 }
 
+vec3 LookAt(in vec3 ro, in vec3 foc){
+  vec3 to = normalize(foc - ro);
+  vec3 r = cross(to, vec3(0, 1, 0));
+  vec3 up = cross(r, to);
+    
+  return normalize((uv.x*r + uv.y*up)*FOV + to);
+}
 vec3 PixelColor() {
 	vec3 pixelColor = vec3(0);
-	vec3 ro = 2.*vec3(0, 1, 0);
+	vec3 ro = vec3(4, 1, 0);
 	vec3 foc = vec3(0, 1, 0);
-
-	float t = time*TAU/5000., r = 5.;
-
-	ro.x += r*cos(t);
-	ro.z += r*sin(t);
 
 	float[2] hit; // 0: hit distance (-1 if no hit)  1: materialID
 
 	vec3 rd = LookAt(ro, foc);
 	MarchScene(hit, ro, rd);
 	getTexelColor(pixelColor, hit, ro, rd);
+
 	if(hit[0] > 0.) pixelColor *= GlobalIllumination(hit, ro, rd);
-	return pixelColor/2.;
+
+	//pixelColor /= 3.;
+
+	return pixelColor;
 }
 
 void main(){

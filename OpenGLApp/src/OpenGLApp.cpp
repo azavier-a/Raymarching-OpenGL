@@ -1,4 +1,3 @@
-
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <fstream>
@@ -6,10 +5,13 @@
 #include <sstream>
 #include "../time.h"
 
+#define STB_IMAGE_IMPLEMENTATION
+#include <../stb_image.h>
+
 #define EXIT_FAIL() return -1
 #define EXIT_SUCCESS() return 0;
 
-GLuint LoadShaders(const char* vertex_file_path, const char* fragment_file_path)	 {
+GLuint LoadShaders(const char* vertex_file_path, const char* fragment_file_path) {
 
 	// Create the shaders
 	GLuint VertexShaderID = glCreateShader(GL_VERTEX_SHADER);
@@ -97,6 +99,30 @@ GLuint LoadShaders(const char* vertex_file_path, const char* fragment_file_path)
 
 	return ProgramID;
 }
+unsigned int LoadCubemap(std::vector<std::string> faces) {
+	unsigned int textureID;
+	glActiveTexture(GL_TEXTURE0);
+	glGenTextures(1, &textureID);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, textureID);
+
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);	
+
+	int width, height, nrChannels;
+	for (unsigned int i = 0; i < faces.size(); i++) {
+		unsigned char* data = stbi_load(faces[i].c_str(), &width, &height, &nrChannels, 0);
+		if (data)
+			glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB, width, height, 0, GL_BGR, GL_UNSIGNED_BYTE, data);
+		else
+			printf("Cubemap tex failed to load at path:\n", faces[i]);
+		stbi_image_free(data);
+	}
+
+	return textureID;
+}
 
 int main() {
 	if (!glfwInit()) {
@@ -144,6 +170,21 @@ int main() {
 	glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(vertex_buffer_data), vertex_buffer_data, GL_STATIC_DRAW);
 
+	std::string cubemap_location = "winter_cubemap/";
+
+	std::vector<std::string> faces {
+		"right.jpg",
+		"left.jpg",
+		"top.jpg",
+		"bottom.jpg",
+		"front.jpg",
+		"back.jpg"
+	};
+	for (int i = 0; i < faces.size(); i++)
+		faces[i] = cubemap_location + faces[i]; 
+
+	unsigned int cubemapTexture = LoadCubemap(faces);
+
 	GLuint screen = LoadShaders("screen.vert", "screen.frag");
 
 	glUseProgram(screen);
@@ -155,9 +196,9 @@ int main() {
 		glfwGetWindowSize(window, &resolution[0], &resolution[1]);
 		glUniform2f(0, resolution[0], resolution[1]);
 
-		time = int(currentTimeMillis() - epoch); \
+		time = int(currentTimeMillis() - epoch);
 		glUniform1i(1, time);
-
+		
 		glEnableVertexAttribArray(0);
 		glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer);
 		glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, (void*)0);
