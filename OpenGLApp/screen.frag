@@ -5,7 +5,7 @@
 #define FAR_PLANE 100.
 #define HIT_DIST 0.01
 
-#define AMBIENT_PERCENT vec3(0.01)
+#define AMBIENT_PERCENT vec3(0.03)
 
 #define AMBIENT 1.
 #define DIFFUSE 1.
@@ -16,7 +16,7 @@
 
 #define REFLECTIONS 1
 
-#define AO_SAMPLES 3.
+#define AO_SAMPLES 5.
 
 #define PI 3.141592
 #define TAU 6.283184
@@ -36,7 +36,7 @@ struct Material {
 } materials[] = Material[](
 	Material(vec3(1), 1., 1., 0.),
 	Material(vec3(1), 0., 1., 0.02), // Spinny thing
-	Material(vec3(0.6, 0, 0.7), 0., 0., 0.)
+	Material(vec3(0.6, 0, 0), 0., 0., 0.1)
 );
 
 struct PointLight {
@@ -65,13 +65,12 @@ float SignedTorusDistance(vec3 p, float r1, float r2) { return length(vec2(lengt
 
 float[2] SceneDistance(in vec3 p) {
 	float[2] data = float[](FAR_PLANE, 0);
-
-	/*
+	
 	float ground = p.y+1.;
 	if(ground < data[0]) {
 		data[0] = ground;
 		data[1] = 1.;
-	}*/
+	}
 
 	float osc = 0.5*sin(time*TAU/2500.);
 
@@ -89,7 +88,7 @@ float[2] SceneDistance(in vec3 p) {
 	rbox = SignedSphereDistance(rboxPos, 0.2);
 	if(rbox < data[0]) {
 		data[0] = rbox;
-		data[1] = 2.;
+		data[1] = 3.;
 	}
 
 	p.xz *= rotationMatrix(time/700.);
@@ -101,7 +100,7 @@ float[2] SceneDistance(in vec3 p) {
 	float torus = SignedSphereDistance(torusPos, 0.05);
 	if(torus < data[0]) {
 		data[0] = torus;
-		data[1] = 2.;
+		data[1] = 3.;
 	}
 	torusPos.zy *= rotationMatrix(time/700.);
 	torusPos.zx *= rotationMatrix(time/200.);
@@ -159,8 +158,8 @@ void getTexelColor(inout vec3 albedo, in float[2] hit, in vec3 ro, in vec3 rd) {
 			albedo = getMaterial(1).albedo*(0.5+0.5*ceil(clamp(vec3(sin(1.5*point.x)+sin(1.5*point.z)), 0., 1.)));
 			break;
 		default:
-			//albedo = getMaterial(int(hit[1])).albedo;
-			albedo = SurfaceNormal(ro + rd*hit[0])+0.5;
+			albedo = getMaterial(int(hit[1])).albedo;
+			//albedo = SurfaceNormal(ro + rd*hit[0])+0.5;
 			break;
 	}
  }
