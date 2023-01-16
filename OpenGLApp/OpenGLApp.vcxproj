@@ -410,31 +410,16 @@
     <ClInclude Include="include\glm\vec3.hpp" />
     <ClInclude Include="include\glm\vec4.hpp" />
     <ClInclude Include="include\glm\vector_relational.hpp" />
-    <ClInclude Include="src\OpenGLApp.h" />
-    <ClInclude Include="stb_image.h" />
-    <ClInclude Include="time.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="time.cpp" />
     <ClCompile Include="src\OpenGLApp.cpp" />
     <ClCompile Include="src\glad.c" />
+    <ClCompile Include="time.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\vendor\GLFW\GLFW.vcxproj">
       <Project>{154B857C-0182-860D-AA6E-6C109684020F}</Project>
     </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="screen.frag" />
-    <None Include="screen.vert" />
-  </ItemGroup>
-  <ItemGroup>
-    <Image Include="back.jpg" />
-    <Image Include="bottom.jpg" />
-    <Image Include="front.jpg" />
-    <Image Include="left.jpg" />
-    <Image Include="right.jpg" />
-    <Image Include="top.jpg" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

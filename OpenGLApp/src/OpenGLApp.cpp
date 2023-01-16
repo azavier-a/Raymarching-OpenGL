@@ -1,13 +1,13 @@
+#include "OpenGLApp.h"
+#include "../time.h"
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <fstream>
 #include <vector>
 #include <sstream>
-#include "../time.h"
 
 #define STB_IMAGE_IMPLEMENTATION
 #include <../stb_image.h>
-#include "OpenGLApp.h"
 
 #define EXIT_FAIL() return -1
 #define EXIT_SUCCESS() return 0;
