@@ -199,24 +199,39 @@ int main() {
 		glfwGetWindowSize(window, &resolution[0], &resolution[1]);
 		glUniform2f(0, resolution[0], resolution[1]);
 		
-		if (glfwGetKey(window, GLFW_KEY_1) == GLFW_PRESS && pause == NULL)
+		if (glfwGetKey(window, GLFW_KEY_1) == GLFW_PRESS) {
+			if (pause != NULL) {
+				epoch += (currentTimeMillis() - pause);
+				pause = NULL;
+			}
 			scroll = -2;
-		if (glfwGetKey(window, GLFW_KEY_2) == GLFW_PRESS && pause == NULL)
+		}
+		if (glfwGetKey(window, GLFW_KEY_2) == GLFW_PRESS) {
+			if (pause != NULL) {
+				epoch += (currentTimeMillis() - pause);
+				pause = NULL;
+			}
 			scroll = -1;
-		if (glfwGetKey(window, GLFW_KEY_3) == GLFW_PRESS && pause == NULL)
-			scroll = 1;
-		if (glfwGetKey(window, GLFW_KEY_4) == GLFW_PRESS && pause == NULL)
-			scroll = 2;
-
-		if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS && pause == NULL) {
+		}
+		if (glfwGetKey(window, GLFW_KEY_3) == GLFW_PRESS && pause == NULL) {
 			pause = currentTimeMillis();
 			scroll = 0;
 		}
-		if (glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS && pause != NULL) {
-			epoch += (currentTimeMillis() - pause);
-			pause = NULL;
+		if (glfwGetKey(window, GLFW_KEY_4) == GLFW_PRESS) {
+			if (pause != NULL) {
+				epoch += (currentTimeMillis() - pause);
+				pause = NULL;
+			}
 			scroll = 1;
 		}
+		if (glfwGetKey(window, GLFW_KEY_5) == GLFW_PRESS && pause == NULL) {
+			if (pause != NULL) {
+				epoch += (currentTimeMillis() - pause);
+				pause = NULL;
+			}
+			scroll = 2;
+		}
+
 
 		switch (scroll) {
 			case -2:
