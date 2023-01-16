@@ -224,14 +224,13 @@ int main() {
 			}
 			scroll = 1;
 		}
-		if (glfwGetKey(window, GLFW_KEY_5) == GLFW_PRESS && pause == NULL) {
+		if (glfwGetKey(window, GLFW_KEY_5) == GLFW_PRESS) {
 			if (pause != NULL) {
 				epoch += (currentTimeMillis() - pause);
 				pause = NULL;
 			}
 			scroll = 2;
 		}
-
 
 		switch (scroll) {
 			case -2:
