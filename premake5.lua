@@ -8,7 +8,5 @@ outputdir = "%{cfg.buildcfg}-%{cfg.system}-%{cfg.architecture}"
 
 group "Dependancies" 
 	include "/vendor/GLFW"
-group "src"
-	include "/OpenGLApp/time.cpp"
 group ""
 	include "OpenGLApp"
