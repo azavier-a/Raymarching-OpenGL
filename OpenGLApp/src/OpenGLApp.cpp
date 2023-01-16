@@ -125,6 +125,14 @@ unsigned int LoadCubemap(std::vector<std::string> faces) {
 	return textureID;
 }
 
+inline double random_double() {
+	// Returns a random real in [0,1).
+	return rand() / (RAND_MAX + 1.0);
+}
+inline double random_double(double min, double max) {
+	// Returns a random real in [min,max).
+	return min + (max - min) * random_double();
+}
 int main() {
 	if (!glfwInit()) {
 		EXIT_FAIL();
@@ -135,9 +143,6 @@ int main() {
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
 	glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE); // To make MacOS happy
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-
-	std::vector<int> resolution = { 0, 0 };
-	int time = 0;
 
 	GLFWwindow* window;
 	window = glfwCreateWindow(1080, 720, "Ray Marching", NULL, NULL);
@@ -190,11 +195,15 @@ int main() {
 
 	glUseProgram(screen);
 
+	std::vector<int> resolution = { 0, 0 };
+	
+	int time = 0;
 	int scroll = 1;
+	auto launch = currentTimeMillis();
 	auto epoch = currentTimeMillis();
 	long long pause = NULL;
 	do {
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		if(pause == NULL) glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		glfwGetWindowSize(window, &resolution[0], &resolution[1]);
 		glUniform2f(0, resolution[0], resolution[1]);
@@ -213,18 +222,18 @@ int main() {
 			}
 			scroll = -1;
 		}
-		if (glfwGetKey(window, GLFW_KEY_3) == GLFW_PRESS && pause == NULL) {
+		if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS && pause == NULL) {
 			pause = currentTimeMillis();
 			scroll = 0;
 		}
-		if (glfwGetKey(window, GLFW_KEY_4) == GLFW_PRESS) {
+		if (glfwGetKey(window, GLFW_KEY_3) == GLFW_PRESS) {
 			if (pause != NULL) {
 				epoch += (currentTimeMillis() - pause);
 				pause = NULL;
 			}
 			scroll = 1;
 		}
-		if (glfwGetKey(window, GLFW_KEY_5) == GLFW_PRESS) {
+		if (glfwGetKey(window, GLFW_KEY_4) == GLFW_PRESS) {
 			if (pause != NULL) {
 				epoch += (currentTimeMillis() - pause);
 				pause = NULL;
@@ -253,6 +262,7 @@ int main() {
 		}
 
 		glUniform1i(1, time);
+		glUniform1f(2, (float)random_double(0, 10000000));
 		
 		glEnableVertexAttribArray(0);
 		glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer);

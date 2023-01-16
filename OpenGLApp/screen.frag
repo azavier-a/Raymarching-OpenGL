@@ -25,6 +25,7 @@ out vec3 color;
 
 uniform vec2 resolution;
 uniform int time;
+uniform float seed;
 
 vec2 uv;
 
@@ -192,6 +193,25 @@ vec3 GlobalIllumination(in float[2] hit, in vec3 ro, in vec3 rd) {
 	return global*direct_light*fre*occ;
 }
 
+float Hash21(in vec2 hash) {
+  vec2 p = fract(hash*vec2(25.124, 85.124));
+  p += dot(p, p + 234.124);
+  return fract(p.x * p.y);
+}
+vec2 randomVec2(in float hash) {
+	vec2 ret;
+	ret.x = Hash21(vec2(hash, -hash));
+	ret.y = Hash21(vec2(ret.x*ret.x, hash));
+	return normalize(ret);
+}
+vec3 randomVec3(in vec3 point) {
+  vec3 ret;
+  ret.x = Hash21(vec2(point.x * point.y, point.z * point.y));
+  ret.y = Hash21(vec2(point.x * point.z, point.y * point.x));
+  ret.z = Hash21(vec2(point.y * point.z, point.z * point.y));
+  return normalize(ret);
+}
+
 vec3 LookAt(in vec3 ro, in vec3 foc){
   vec3 to = normalize(foc - ro);
   vec3 r = cross(to, vec3(0, 1, 0));
@@ -205,6 +225,8 @@ vec3 PixelColor() {
 	vec3 foc = vec3(0, 1, 0);
 
 	float[2] hit; // 0: hit distance (-1 if no hit)  1: materialID
+
+	vec3 off = 0.002*randomVec3(vec3(randomVec2(seed), seed));
 
 	vec3 rd = LookAt(ro, foc);
 	MarchScene(hit, ro, rd);
