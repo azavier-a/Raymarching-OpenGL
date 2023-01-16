@@ -35,8 +35,8 @@ struct Material {
 	float emissive;
 } materials[] = Material[](
 	Material(vec3(1), 1., 1., 0.),
-	Material(vec3(1), 0., 1., 0.02), // Spinny thing
-	Material(vec3(0.6, 0, 0), 0., 0., 0.1)
+	Material(vec3(0.6, 0, 0), 0., 0., 0.1),
+	Material(vec3(1), 0., 1., 0.02) // Spinny thing
 );
 
 struct PointLight {
@@ -78,39 +78,17 @@ float[2] SceneDistance(in vec3 p) {
 	rboxPos.xy *= rotationMatrix(time/700.);
 	rboxPos.zy *= rotationMatrix(time/400.);
 	//float rbox = SignedRoundedBoxDistance(rboxPos, vec4(0.2, 1, 0.7, 0.6));
-	float rbox = SignedTorusDistance(rboxPos, 0.5, 0.1);
+	float rbox = SignedSphereDistance(rboxPos, 0.2);
 	if(rbox < data[0]) {
 		data[0] = rbox;
 		data[1] = 2.;
 	}
 
-	rbox = SignedSphereDistance(rboxPos, 0.2);
+	rbox = SignedTorusDistance(rboxPos, 0.5, 0.1);
 	if(rbox < data[0]) {
 		data[0] = rbox;
 		data[1] = 3.;
 	}
-
-	p.xz *= rotationMatrix(time/700.);
-	p.x = abs(p.x);
-
-	vec3 torusPos = p-vec3(0, 1, 2);
-	torusPos.y += osc;
-	torusPos.xy *= rotationMatrix(PI/2);
-	torusPos.y = abs(torusPos.y);
-
-	float torus = SignedSphereDistance(torusPos, 0.05);
-	if(torus < data[0]) {
-		data[0] = torus;
-		data[1] = 3.;
-	}
-	torusPos.zy *= rotationMatrix(time/700.);
-	torusPos.zx *= rotationMatrix(time/200.);
-	torus = SignedTorusDistance(torusPos, 0.15, 0.02);
-	if(torus < data[0]) {
-		data[0] = torus;
-		data[1] = 2.;
-	}
-
 	return data;
 }
 

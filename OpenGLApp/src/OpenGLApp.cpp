@@ -7,6 +7,7 @@
 
 #define STB_IMAGE_IMPLEMENTATION
 #include <../stb_image.h>
+#include "OpenGLApp.h"
 
 #define EXIT_FAIL() return -1
 #define EXIT_SUCCESS() return 0;
@@ -189,14 +190,54 @@ int main() {
 
 	glUseProgram(screen);
 
+	int scroll = 1;
 	auto epoch = currentTimeMillis();
+	long long pause = NULL;
 	do {
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		glfwGetWindowSize(window, &resolution[0], &resolution[1]);
 		glUniform2f(0, resolution[0], resolution[1]);
+		
+		if (glfwGetKey(window, GLFW_KEY_1) == GLFW_PRESS && pause == NULL)
+			scroll = -2;
+		if (glfwGetKey(window, GLFW_KEY_2) == GLFW_PRESS && pause == NULL)
+			scroll = -1;
+		if (glfwGetKey(window, GLFW_KEY_3) == GLFW_PRESS && pause == NULL)
+			scroll = 1;
+		if (glfwGetKey(window, GLFW_KEY_4) == GLFW_PRESS && pause == NULL)
+			scroll = 2;
 
-		time = int(currentTimeMillis() - epoch);
+		if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS && pause == NULL) {
+			pause = currentTimeMillis();
+			scroll = 0;
+		}
+		if (glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS && pause != NULL) {
+			epoch += (currentTimeMillis() - pause);
+			pause = NULL;
+			scroll = 1;
+		}
+
+		switch (scroll) {
+			case -2:
+				epoch += 25;
+				time = int(currentTimeMillis() - epoch);
+				break;
+			case -1:
+				epoch += 10;
+				time = int(currentTimeMillis() - epoch);
+				break;
+			case 0:
+				break;
+			case 1:
+				time = int(currentTimeMillis() - epoch);
+				break;
+			case 2:
+				epoch -= 10;
+				time = int(currentTimeMillis() - epoch);
+				break;
+		}
+
 		glUniform1i(1, time);
 		
 		glEnableVertexAttribArray(0);

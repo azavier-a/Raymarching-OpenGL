@@ -849,6 +849,7 @@
     <ClInclude Include="stb_image.h">
       <Filter>src</Filter>
     </ClInclude>
+    <ClInclude Include="src\OpenGLApp.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\OpenGLApp.cpp">

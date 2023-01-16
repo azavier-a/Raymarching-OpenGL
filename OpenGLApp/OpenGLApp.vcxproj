@@ -410,6 +410,7 @@
     <ClInclude Include="include\glm\vec3.hpp" />
     <ClInclude Include="include\glm\vec4.hpp" />
     <ClInclude Include="include\glm\vector_relational.hpp" />
+    <ClInclude Include="src\OpenGLApp.h" />
     <ClInclude Include="stb_image.h" />
     <ClInclude Include="time.h" />
   </ItemGroup>
