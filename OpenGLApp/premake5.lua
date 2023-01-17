@@ -5,7 +5,7 @@ project "OpenGLApp"
    targetdir "bin/%{cfg.buildcfg}"
    staticruntime "off"
 
-   files { "src/**.cpp", "**.hpp", "src/glad.c"}
+   files { "src/**.cpp", "screen.frag", "**.hpp", "src/glad.c"}
 
    includedirs
    {

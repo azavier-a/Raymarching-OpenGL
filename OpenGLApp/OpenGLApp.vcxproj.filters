@@ -850,8 +850,6 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <None Include="screen.frag">
-      <Filter>src</Filter>
-    </None>
+    <None Include="screen.frag" />
   </ItemGroup>
 </Project>

@@ -54,15 +54,10 @@ mat2 rotationMatrix(float angle) {
 	float s = sin(angle), c = cos(angle);
 	return mat2(c, -s, s, c);
 }
-
 float SignedSphereDistance(vec3 pos, float r) { return length(pos) - r; }
-
 float SignedBoxDistance(vec3 worldDataP, vec3 worldDataD) { return length(max(abs(worldDataP) - worldDataD, vec3(0))); }
-
 float SignedRoundedBoxDistance(vec3 worldDataP, vec4 worldDataD) { return SignedBoxDistance(worldDataP, worldDataD.xyz - worldDataD.w) - worldDataD.w; }
-
 float SignedTorusDistance(vec3 p, float r1, float r2) { return length(vec2(length(p.xy)-r1,p.z))-r2; }
-
 float[2] SceneDistance(in vec3 p) {
 	float[2] data = float[](FAR_PLANE, 0);
 	
@@ -71,34 +66,33 @@ float[2] SceneDistance(in vec3 p) {
 		data[0] = ground;
 		data[1] = 1.;
 	}
-
+	/*
 	vec3 spherePos = p-vec3(0, 1, 0);
 	float sphere = SignedSphereDistance(spherePos, 1.);
 	if(sphere < data[0]) {
 		data[0] = sphere;
 		data[1] = 2.;
 	}
-
-	/*
+	*/
+	
 	float osc = 0.5*sin(time*TAU/2500.);
 
 	vec3 rboxPos = p-vec3(0, 1, 0);
 	rboxPos.y += osc;
-	rboxPos.xy *= rotationMatrix(time/700.);
-	rboxPos.zy *= rotationMatrix(time/400.);
-	//float rbox = SignedRoundedBoxDistance(rboxPos, vec4(0.2, 1, 0.7, 0.6));
 	float rbox = SignedSphereDistance(rboxPos, 0.2);
 	if(rbox < data[0]) {
 		data[0] = rbox;
 		data[1] = 2.;
 	}
 
+	rboxPos.xy *= rotationMatrix(time/700.);
+	rboxPos.zy *= rotationMatrix(time/400.);
 	rbox = SignedTorusDistance(rboxPos, 0.5, 0.1);
 	if(rbox < data[0]) {
 		data[0] = rbox;
 		data[1] = 3.;
 	}
-	*/
+	
 	return data;
 }
 

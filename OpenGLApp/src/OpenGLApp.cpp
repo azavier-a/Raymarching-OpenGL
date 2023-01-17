@@ -11,8 +11,9 @@
 #include <../stb_image.h>
 
 #define EXIT_FAIL() return -1
-#define EXIT_SUCCESS() return 0
 #define ASSERT_PAUSE() if (pause != NULL) { epoch += (currentTimeMillis() - pause); pause = NULL; }
+
+/******||UTILS||******/
 
 __int64 currentTimeMillis() {
 	FILETIME f;
@@ -21,6 +22,7 @@ __int64 currentTimeMillis() {
 	__int64 nano = ((__int64)f.dwHighDateTime << 32LL) + (__int64)f.dwLowDateTime;
 	return (nano - 116444736000000000LL) / 10000;
 }
+
 inline double random_double() {
 	// Returns a random real in [0,1).
 	return rand() / (RAND_MAX + 1.0);
@@ -29,6 +31,7 @@ inline double random_double(double min, double max) {
 	// Returns a random real in [min,max).
 	return min + (max - min) * random_double();
 }
+
 GLuint LoadShaders(const char* vertex_file_path, const char* fragment_file_path) {
 
 	// Create the shaders
@@ -117,6 +120,7 @@ GLuint LoadShaders(const char* vertex_file_path, const char* fragment_file_path)
 
 	return ProgramID;
 }
+
 unsigned int LoadCubemap(std::vector<std::string> faces) {
 	unsigned int textureID;
 	glActiveTexture(GL_TEXTURE0);
@@ -142,7 +146,12 @@ unsigned int LoadCubemap(std::vector<std::string> faces) {
 	return textureID;
 }
 
+/******||MAIN||******/
+
 int main() {
+
+	// PRE-INIT
+
 	if (!glfwInit()) {
 		EXIT_FAIL();
 	}
@@ -160,14 +169,14 @@ int main() {
 		EXIT_FAIL();
 	}
 	glfwMakeContextCurrent(window);
-
 	if(!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
 		EXIT_FAIL();
 	}
-
 	glfwSetInputMode(window, GLFW_STICKY_KEYS, GL_TRUE);
 
-	static const GLfloat vertex_buffer_data[] = {
+	// VERTEX ARRAY/BUFFER
+
+	static const float vertex_buffer_data[] = {
 		-1.0f, 1.0f,
 		1.0f, 1.0f,
 		1.0f, -1.0f,
@@ -175,15 +184,16 @@ int main() {
 		-1.0f, -1.0f,
 		-1.0f, 1.0f
 	};
-
-	GLuint VAID;
+	unsigned int VAID;
 	glGenVertexArrays(1, &VAID);
 	glBindVertexArray(VAID);
 
-	GLuint vertexbuffer;
+	unsigned int vertexbuffer;
 	glGenBuffers(1, &vertexbuffer);
 	glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(vertex_buffer_data), vertex_buffer_data, GL_STATIC_DRAW);
+
+	// CUBEMAPS
 
 	std::string cubemap_location = "winter_cubemap/";
 
@@ -200,23 +210,27 @@ int main() {
 
 	unsigned int cubemapTexture = LoadCubemap(faces);
 
-	GLuint screen = LoadShaders("screen.vert", "screen.frag");
-
-	glUseProgram(screen);
+	// INITIALIZATION
 
 	std::vector<int> resolution = { 0, 0 };
+
+	unsigned int screen = LoadShaders("screen.vert", "screen.frag");
+	glUseProgram(screen);
+
 	
 	int time = 0;
 	int scroll = 1;
 	auto launch = currentTimeMillis();
 	auto epoch = currentTimeMillis();
 	long long pause = NULL;
-	do {
-		if(pause == NULL) glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		glfwGetWindowSize(window, &resolution[0], &resolution[1]);
-		glUniform2f(0, resolution[0], resolution[1]);
+	// MAIN LOOP
+
+	do {
+		// my theory is that if i dont clear the buffer bit while it's paused, it's free progressive rendering??
+		if (pause == NULL) glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		
+		// UNREADABLE INPUT SECTION
 		if (glfwGetKey(window, GLFW_KEY_1) == GLFW_PRESS) {
 			ASSERT_PAUSE();
 			scroll = -2;
@@ -238,6 +252,7 @@ int main() {
 			scroll = 2;
 		}
 
+		// TIME MANIPULATION (???)
 		switch (scroll) {
 			case -2:
 				epoch += 25;
@@ -258,9 +273,13 @@ int main() {
 				break;
 		}
 
-		glUniform1i(1, time);
-		glUniform1f(2, (float)random_double(0, 10000000));
+		// UNIFORMS
+		glfwGetWindowSize(window, &resolution[0], &resolution[1]); // GET RESOLUTION
+		glUniform2f(0, resolution[0], resolution[1]); // PUSH RESOLUTION
+		glUniform1i(1, time); // PUSH TIME
+		glUniform1f(2, (float)random_double(0, 10000000)); // PUSH RANDOM SEED
 		
+		// DRAWING THE SQUARE
 		glEnableVertexAttribArray(0);
 		glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer);
 		glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, (void*)0);
