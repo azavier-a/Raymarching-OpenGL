@@ -72,6 +72,14 @@ float[2] SceneDistance(in vec3 p) {
 		data[1] = 1.;
 	}
 
+	vec3 spherePos = p-vec3(0, 1, 0);
+	float sphere = SignedSphereDistance(spherePos, 1.);
+	if(sphere < data[0]) {
+		data[0] = sphere;
+		data[1] = 2.;
+	}
+
+	/*
 	float osc = 0.5*sin(time*TAU/2500.);
 
 	vec3 rboxPos = p-vec3(0, 1, 0);
@@ -90,6 +98,7 @@ float[2] SceneDistance(in vec3 p) {
 		data[0] = rbox;
 		data[1] = 3.;
 	}
+	*/
 	return data;
 }
 

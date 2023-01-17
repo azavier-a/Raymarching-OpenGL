@@ -11,7 +11,8 @@
 #include <../stb_image.h>
 
 #define EXIT_FAIL() return -1
-#define EXIT_SUCCESS() return 0;
+#define EXIT_SUCCESS() return 0
+#define ASSERT_PAUSE() if (pause != NULL) { epoch += (currentTimeMillis() - pause); pause = NULL; }
 
 __int64 currentTimeMillis() {
 	FILETIME f;
@@ -217,17 +218,11 @@ int main() {
 		glUniform2f(0, resolution[0], resolution[1]);
 		
 		if (glfwGetKey(window, GLFW_KEY_1) == GLFW_PRESS) {
-			if (pause != NULL) {
-				epoch += (currentTimeMillis() - pause);
-				pause = NULL;
-			}
+			ASSERT_PAUSE();
 			scroll = -2;
 		}
 		if (glfwGetKey(window, GLFW_KEY_2) == GLFW_PRESS) {
-			if (pause != NULL) {
-				epoch += (currentTimeMillis() - pause);
-				pause = NULL;
-			}
+			ASSERT_PAUSE();
 			scroll = -1;
 		}
 		if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS && pause == NULL) {
@@ -235,17 +230,11 @@ int main() {
 			scroll = 0;
 		}
 		if (glfwGetKey(window, GLFW_KEY_3) == GLFW_PRESS) {
-			if (pause != NULL) {
-				epoch += (currentTimeMillis() - pause);
-				pause = NULL;
-			}
+			ASSERT_PAUSE();
 			scroll = 1;
 		}
 		if (glfwGetKey(window, GLFW_KEY_4) == GLFW_PRESS) {
-			if (pause != NULL) {
-				epoch += (currentTimeMillis() - pause);
-				pause = NULL;
-			}
+			ASSERT_PAUSE();
 			scroll = 2;
 		}
 

@@ -849,4 +849,9 @@
       <Filter>src</Filter>
     </ClCompile>
   </ItemGroup>
+  <ItemGroup>
+    <None Include="screen.frag">
+      <Filter>src</Filter>
+    </None>
+  </ItemGroup>
 </Project>
