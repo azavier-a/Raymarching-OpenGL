@@ -19,3 +19,12 @@
 
 > 4th component of color is intensity, radius is the reach of the light.
 </details>
+
+Controls:
+|Key |Time multiplier |
+|----|----------------|
+|1   |-2x             |
+|2   |-1x             |
+|3   |1x              |
+|4   |2x              |
+|W   |0x              |
