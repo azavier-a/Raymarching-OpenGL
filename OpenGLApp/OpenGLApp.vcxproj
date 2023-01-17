@@ -414,7 +414,6 @@
   <ItemGroup>
     <ClCompile Include="src\OpenGLApp.cpp" />
     <ClCompile Include="src\glad.c" />
-    <ClCompile Include="time.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\vendor\GLFW\GLFW.vcxproj">

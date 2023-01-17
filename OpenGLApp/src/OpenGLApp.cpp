@@ -1,10 +1,11 @@
 #include "OpenGLApp.h"
-#include "../time.h"
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <fstream>
 #include <vector>
 #include <sstream>
+#include <stdio.h>
+#include <windows.h>
 
 #define STB_IMAGE_IMPLEMENTATION
 #include <../stb_image.h>
@@ -12,6 +13,21 @@
 #define EXIT_FAIL() return -1
 #define EXIT_SUCCESS() return 0;
 
+__int64 currentTimeMillis() {
+	FILETIME f;
+	GetSystemTimeAsFileTime(&f);
+	(long long)f.dwHighDateTime;
+	__int64 nano = ((__int64)f.dwHighDateTime << 32LL) + (__int64)f.dwLowDateTime;
+	return (nano - 116444736000000000LL) / 10000;
+}
+inline double random_double() {
+	// Returns a random real in [0,1).
+	return rand() / (RAND_MAX + 1.0);
+}
+inline double random_double(double min, double max) {
+	// Returns a random real in [min,max).
+	return min + (max - min) * random_double();
+}
 GLuint LoadShaders(const char* vertex_file_path, const char* fragment_file_path) {
 
 	// Create the shaders
@@ -125,14 +141,6 @@ unsigned int LoadCubemap(std::vector<std::string> faces) {
 	return textureID;
 }
 
-inline double random_double() {
-	// Returns a random real in [0,1).
-	return rand() / (RAND_MAX + 1.0);
-}
-inline double random_double(double min, double max) {
-	// Returns a random real in [min,max).
-	return min + (max - min) * random_double();
-}
 int main() {
 	if (!glfwInit()) {
 		EXIT_FAIL();

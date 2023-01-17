@@ -848,8 +848,5 @@
     <ClCompile Include="src\glad.c">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="time.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
   </ItemGroup>
 </Project>
