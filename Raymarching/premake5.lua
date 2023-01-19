@@ -1,4 +1,4 @@
-project "OpenGLApp"
+project "Raymarching"
    kind "ConsoleApp"
    language "C++"
    cppdialect "C++17"
