@@ -27,6 +27,8 @@ uniform vec2 resolution;
 uniform int time;
 uniform float seed;
 
+uniform vec3 cam;
+
 vec2 uv;
 
 struct Material {
@@ -50,14 +52,14 @@ struct PointLight {
 	PointLight(5.*vec3(0., 2, 1.), vec4(0, 1, 0, 2), 100.)
 );
 
-mat2 rotationMatrix(float angle) {
+mat2 rotationMatrix(in float angle) {
 	float s = sin(angle), c = cos(angle);
 	return mat2(c, -s, s, c);
 }
-float SignedSphereDistance(vec3 pos, float r) { return length(pos) - r; }
-float SignedBoxDistance(vec3 worldDataP, vec3 worldDataD) { return length(max(abs(worldDataP) - worldDataD, vec3(0))); }
-float SignedRoundedBoxDistance(vec3 worldDataP, vec4 worldDataD) { return SignedBoxDistance(worldDataP, worldDataD.xyz - worldDataD.w) - worldDataD.w; }
-float SignedTorusDistance(vec3 p, float r1, float r2) { return length(vec2(length(p.xy)-r1,p.z))-r2; }
+float SignedSphereDistance(in vec3 pos, in float r) { return length(pos) - r; }
+float SignedBoxDistance(in vec3 worldDataP, in vec3 worldDataD) { return length(max(abs(worldDataP) - worldDataD, vec3(0))); }
+float SignedRoundedBoxDistance(in vec3 worldDataP, in vec4 worldDataD) { return SignedBoxDistance(worldDataP, worldDataD.xyz - worldDataD.w) - worldDataD.w; }
+float SignedTorusDistance(in vec3 p, in float r1, in float r2) { return length(vec2(length(p.xy)-r1,p.z))-r2; }
 float[2] SceneDistance(in vec3 p) {
 	float[2] data = float[](FAR_PLANE, 0);
 	
@@ -106,7 +108,7 @@ vec3 SurfaceNormal(in vec3 point) {
   return normalize(SceneDistance(point)[0] - gradient);
 }
 
-void MarchScene(inout float[2] hit, in vec3 ro, in vec3 rd) {
+void MarchScene(out float[2] hit, in vec3 ro, in vec3 rd) {
 	float[2] data; // 0: distance to scene  1: materialID
 	
 	for(hit[0] = 0.; hit[0] <= FAR_PLANE;) {
@@ -118,11 +120,10 @@ void MarchScene(inout float[2] hit, in vec3 ro, in vec3 rd) {
 		hit[0] += data[0];
 	}
 
-	if(hit[0] > FAR_PLANE) {
+	if(hit[0] > FAR_PLANE)
 		hit[0] = -1;
-	} else {
+	else
 		hit[1] = data[1];
-	}
 }
 
 Material getMaterial(int index) {
@@ -224,18 +225,18 @@ vec3 LookAt(in vec3 ro, in vec3 foc){
 }
 vec3 PixelColor() {
 	vec3 pixelColor = vec3(0);
-	vec3 ro = vec3(4, 0.1, 0);
-	vec3 foc = vec3(0, 1, 0);
+	//vec3 ro = vec3(4, 0.1, 0);
+	vec3 foc = vec3(cam.x, cam.y, cam.z + 1.);
 
 	float[2] hit; // 0: hit distance (-1 if no hit)  1: materialID
 
 	vec3 off = 0.002*randomVec3(vec3(randomVec2(seed), seed));
 
-	vec3 rd = LookAt(ro, foc);
-	MarchScene(hit, ro, rd);
-	getTexelColor(pixelColor, hit, ro, rd);
+	vec3 rd = LookAt(cam, foc);
+	MarchScene(hit, cam, rd);
+	getTexelColor(pixelColor, hit, cam, rd);
 
-	if(hit[0] > 0.) pixelColor *= GlobalIllumination(hit, ro, rd);
+	if(hit[0] > 0.) pixelColor *= GlobalIllumination(hit, cam, rd);
 
 	//pixelColor /= 3.;
 

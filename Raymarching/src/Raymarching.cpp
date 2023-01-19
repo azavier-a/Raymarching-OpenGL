@@ -22,7 +22,6 @@ __int64 currentTimeMillis() {
 	__int64 nano = ((__int64)f.dwHighDateTime << 32LL) + (__int64)f.dwLowDateTime;
 	return (nano - 116444736000000000LL) / 10000;
 }
-
 inline double random_double() {
 	// Returns a random real in [0,1).
 	return rand() / (RAND_MAX + 1.0);
@@ -31,7 +30,6 @@ inline double random_double(double min, double max) {
 	// Returns a random real in [min,max).
 	return min + (max - min) * random_double();
 }
-
 GLuint LoadShaders(const char* vertex_file_path, const char* fragment_file_path) {
 
 	// Create the shaders
@@ -121,61 +119,30 @@ GLuint LoadShaders(const char* vertex_file_path, const char* fragment_file_path)
 	return ProgramID;
 }
 
-unsigned int LoadCubemap(std::vector<std::string> faces) {
-	unsigned int textureID;
-	glActiveTexture(GL_TEXTURE0);
-	glGenTextures(1, &textureID);
-	glBindTexture(GL_TEXTURE_CUBE_MAP, textureID);
-
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);	
-
-	int width, height, nrChannels;
-	for (unsigned int i = 0; i < faces.size(); i++) {
-		unsigned char* data = stbi_load(faces[i].c_str(), &width, &height, &nrChannels, 0);
-		if (data)
-			glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB, width, height, 0, GL_BGR, GL_UNSIGNED_BYTE, data);
-		else
-			printf("Cubemap tex failed to load at path:\n", faces[i]);
-		stbi_image_free(data);
-	}
-
-	return textureID;
-}
-
 /******||MAIN||******/
-
-int main() {
-
-	// PRE-INIT
-
-	if (!glfwInit()) {
+int GLFW_INIT() {
+	if (!glfwInit())
 		EXIT_FAIL();
-	}
 
 	glfwWindowHint(GLFW_SAMPLES, 1); // antialiasing
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3); // OpenGL 3.3
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
 	glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE); // To make MacOS happy
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-
-	GLFWwindow* window;
-	window = glfwCreateWindow(1080, 720, "Ray Marching", NULL, NULL);
-	if (window == NULL) {
+}
+GLFWwindow* createWindow(int wid, int hei, const char* name) {
+	GLFWwindow* win = glfwCreateWindow(wid, hei, name, NULL, NULL);
+	if (win == NULL) {
 		glfwTerminate();
-		EXIT_FAIL();
+		return NULL;
 	}
-	glfwMakeContextCurrent(window);
-	if(!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
-		EXIT_FAIL();
+	glfwMakeContextCurrent(win);
+	if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
+		return NULL;
 	}
-	glfwSetInputMode(window, GLFW_STICKY_KEYS, GL_TRUE);
-
-	// VERTEX ARRAY/BUFFER
-
+	return win;
+}
+void genVAsVBs(GLuint* VAID, GLuint* VB) {
 	static const float vertex_buffer_data[] = {
 		-1.0f, 1.0f,
 		1.0f, 1.0f,
@@ -184,31 +151,32 @@ int main() {
 		-1.0f, -1.0f,
 		-1.0f, 1.0f
 	};
-	unsigned int VAID;
-	glGenVertexArrays(1, &VAID);
-	glBindVertexArray(VAID);
+	glGenVertexArrays(1, VAID);
+	glBindVertexArray(*VAID);
 
-	unsigned int vertexbuffer;
-	glGenBuffers(1, &vertexbuffer);
-	glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer);
+	glGenBuffers(1, VB);
+	glBindBuffer(GL_ARRAY_BUFFER, *VB);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(vertex_buffer_data), vertex_buffer_data, GL_STATIC_DRAW);
+}
 
-	// CUBEMAPS
+int main() {
+	// WINDOW INIT
 
-	std::string cubemap_location = "winter_cubemap/";
+	if (GLFW_INIT() == -1)
+		EXIT_FAIL();
+	
+	GLFWwindow* window = createWindow(1080, 720, "Ray Marching");
+	if(window == NULL)
+		EXIT_FAIL();
 
-	std::vector<std::string> faces {
-		"right.jpg",
-		"left.jpg",
-		"top.jpg",
-		"bottom.jpg",
-		"front.jpg",
-		"back.jpg"
-	};
-	for (int i = 0; i < faces.size(); i++)
-		faces[i] = cubemap_location + faces[i]; 
+	glfwSetInputMode(window, GLFW_STICKY_KEYS, GL_TRUE);
 
-	unsigned int cubemapTexture = LoadCubemap(faces);
+	// VERTEX ARRAY/BUFFER
+
+	unsigned int VAID;
+	unsigned int vertexbuffer;
+
+	genVAsVBs(&VAID, &vertexbuffer);
 
 	// INITIALIZATION
 
@@ -218,14 +186,15 @@ int main() {
 	glUseProgram(screen);
 
 	
-	int time = 0;
 	int scroll = 1;
 	auto launch = currentTimeMillis();
 	auto epoch = currentTimeMillis();
+	int time;
 	long long pause = NULL;
 
 	// MAIN LOOP
 
+	std::vector<float> ro = { 0.0f, 1.0f, -4.0f };
 	do {
 		// my theory is that if i dont clear the buffer bit while it's paused, it's free progressive rendering??
 		if (pause == NULL) glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -275,10 +244,10 @@ int main() {
 
 		// UNIFORMS
 		glfwGetWindowSize(window, &resolution[0], &resolution[1]); // GET RESOLUTION
-		glUniform2f(0, resolution[0], resolution[1]); // PUSH RESOLUTION
-		glUniform1i(1, time); // PUSH TIME
-		glUniform1f(2, (float)random_double(0, 10000000)); // PUSH RANDOM SEED
-		
+		glUniform1f(-1, (float)random_double(0, 10000000)); // PUSH RANDOM SEED
+		glUniform3f(0, ro[0], ro[1], ro[2]);
+		glUniform2f(1, resolution[0], resolution[1]); // PUSH RESOLUTION
+		glUniform1i(2, time); // PUSH TIME
 		// DRAWING THE SQUARE
 		glEnableVertexAttribArray(0);
 		glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer);
