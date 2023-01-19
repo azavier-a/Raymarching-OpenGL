@@ -842,7 +842,7 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="src\OpenGLApp.cpp">
+    <ClCompile Include="src\Raymarching.cpp">
       <Filter>src</Filter>
     </ClCompile>
     <ClCompile Include="src\glad.c">

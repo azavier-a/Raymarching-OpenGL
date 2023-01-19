@@ -412,7 +412,7 @@
     <ClInclude Include="include\glm\vector_relational.hpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="src\OpenGLApp.cpp" />
+    <ClCompile Include="src\Raymarching.cpp" />
     <ClCompile Include="src\glad.c" />
   </ItemGroup>
   <ItemGroup>
