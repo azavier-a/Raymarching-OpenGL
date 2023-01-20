@@ -6,12 +6,19 @@
 #include <sstream>
 #include <stdio.h>
 #include <windows.h>
+#include <glm/matrix.hpp>
 
 #define STB_IMAGE_IMPLEMENTATION
 #include <../stb_image.h>
 
 #define EXIT_FAIL() return -1
 #define ASSERT_PAUSE() if (pause != NULL) { epoch += (currentTimeMillis() - pause); pause = NULL; }
+
+#define SPEED 12.
+#define CAM_SPEED 20
+
+#define PI 3.141592
+#define TAU 6.283184
 
 /******||UTILS||******/
 
@@ -159,16 +166,107 @@ void genVAsVBs(GLuint* VAID, GLuint* VB) {
 	glBufferData(GL_ARRAY_BUFFER, sizeof(vertex_buffer_data), vertex_buffer_data, GL_STATIC_DRAW);
 }
 
+int scroll = 1;
+long long pause = NULL;
+auto epoch = currentTimeMillis();
+
+glm::vec3 ro = { 0.0f, 1.0f, -4.0f };
+
+float xa = 0.0f, ya = 0.0f;
+glm::vec3 look = { 0.0f, 0.0f, 1.0f };
+
+void timeFlow() {
+	switch (scroll) {
+		case -2:
+			epoch += 25;
+			break;
+		case -1:
+			epoch += 10;
+			break;
+		case 0:
+		case 1:
+			break;
+		case 2:
+			epoch -= 10;
+			break;
+	}
+}
+void input(GLFWwindow* window, float dT) {
+	// TIME
+	if (glfwGetKey(window, GLFW_KEY_2) == GLFW_PRESS) {
+		ASSERT_PAUSE();
+		scroll = -2;
+	}
+	else if (glfwGetKey(window, GLFW_KEY_3) == GLFW_PRESS) {
+		ASSERT_PAUSE();
+		scroll = -1;
+	}
+	else if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS && pause == NULL) {
+		pause = currentTimeMillis();
+		scroll = 0;
+	}
+	else if (glfwGetKey(window, GLFW_KEY_4) == GLFW_PRESS) {
+		ASSERT_PAUSE();
+		scroll = 1;
+	}
+	else if (glfwGetKey(window, GLFW_KEY_5) == GLFW_PRESS) {
+		ASSERT_PAUSE();
+		scroll = 2;
+	}
+	// CAMERA
+	glm::vec3 right = glm::cross(look, glm::vec3{ 0.0f, 1.0f, 0.0f });
+	glm::vec3 up = -glm::cross(look, right);
+
+	float sp = SPEED * dT;
+
+	if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+		ro += glm::vec3{ right[0] * sp, right[1] * sp, right[2] * sp };
+	else if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+		ro -= glm::vec3{ right[0] * sp, right[1] * sp, right[2] * sp };
+
+	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+		ro += glm::vec3{ look[0] * sp, look[1] * sp, look[2] * sp };
+	else if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+		ro -= glm::vec3{ look[0] * sp, look[1] * sp, look[2] * sp };
+
+	if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS)
+		ro += glm::vec3{ up[0] * sp, up[1] * sp, up[2] * sp };
+	else if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS)
+		ro -= glm::vec3{ up[0] * sp, up[1] * sp, up[2] * sp };
+
+
+	float dx = PI / 264.;
+	sp = CAM_SPEED * dT;
+	look[1] = glm::clamp(look[1], -1.0f, 1.0f);
+
+	if(glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS) {
+		float c = std::cos(dx), s = std::sin(dx);
+		look = glm::mat3x3{ c, 0.0f, s, 0.0f, 1.0f, 0.0f, -s, 0.0f, c } * look;
+	} else if(glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS) {
+		float c = std::cos(dx), s = std::sin(dx);
+		look = glm::mat3x3{ c, 0.0f, -s, 0.0f, 1.0f, 0.0f, s, 0.0f, c } * look;
+	}
+	dx = PI / 512.;
+	sp *= 0.05;
+	if(glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS) {
+		float c = std::cos(dx), s = std::sin(dx);
+		look += glm::vec3(0.0f, c*sp, -s*sp);
+	} else if(glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS) {
+		float c = std::cos(dx), s = std::sin(dx);
+		look += glm::vec3(0.0f, -c*sp, s*sp);
+	}
+}
 int main() {
+
 	// WINDOW INIT
 
-	if (GLFW_INIT() == -1)
+	if(GLFW_INIT() == -1)
 		EXIT_FAIL();
 	
 	GLFWwindow* window = createWindow(1080, 720, "Ray Marching");
 	if(window == NULL)
 		EXIT_FAIL();
-
+	
 	glfwSetInputMode(window, GLFW_STICKY_KEYS, GL_TRUE);
 
 	// VERTEX ARRAY/BUFFER
@@ -184,70 +282,39 @@ int main() {
 
 	unsigned int screen = LoadShaders("screen.vert", "screen.frag");
 	glUseProgram(screen);
-
 	
-	int scroll = 1;
 	auto launch = currentTimeMillis();
-	auto epoch = currentTimeMillis();
 	int time;
-	long long pause = NULL;
 
 	// MAIN LOOP
-
-	std::vector<float> ro = { 0.0f, 1.0f, -4.0f };
+	long long last = currentTimeMillis(), cur;
+	float dT;
 	do {
-		// my theory is that if i dont clear the buffer bit while it's paused, it's free progressive rendering??
-		if (pause == NULL) glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		// deltaTime calculations.
+		cur = currentTimeMillis();
+		dT = 0.001f * (cur - last);
+		last = cur;
 		
-		// UNREADABLE INPUT SECTION
-		if (glfwGetKey(window, GLFW_KEY_1) == GLFW_PRESS) {
-			ASSERT_PAUSE();
-			scroll = -2;
-		}
-		if (glfwGetKey(window, GLFW_KEY_2) == GLFW_PRESS) {
-			ASSERT_PAUSE();
-			scroll = -1;
-		}
-		if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS && pause == NULL) {
-			pause = currentTimeMillis();
-			scroll = 0;
-		}
-		if (glfwGetKey(window, GLFW_KEY_3) == GLFW_PRESS) {
-			ASSERT_PAUSE();
-			scroll = 1;
-		}
-		if (glfwGetKey(window, GLFW_KEY_4) == GLFW_PRESS) {
-			ASSERT_PAUSE();
-			scroll = 2;
-		}
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		
+		// INPUT SECTION
+		input(window, dT);
 
 		// TIME MANIPULATION (???)
-		switch (scroll) {
-			case -2:
-				epoch += 25;
-				time = int(currentTimeMillis() - epoch);
-				break;
-			case -1:
-				epoch += 10;
-				time = int(currentTimeMillis() - epoch);
-				break;
-			case 0:
-				break;
-			case 1:
-				time = int(currentTimeMillis() - epoch);
-				break;
-			case 2:
-				epoch -= 10;
-				time = int(currentTimeMillis() - epoch);
-				break;
-		}
+		timeFlow(); // changes the 'epoch' which is the time my program thinks it started. if you add/subtract small amounts repeatedly, it simulates the motion through time.
+		if(scroll != 0) time = int(currentTimeMillis() - epoch);
 
 		// UNIFORMS
-		glfwGetWindowSize(window, &resolution[0], &resolution[1]); // GET RESOLUTION
 		glUniform1f(-1, (float)random_double(0, 10000000)); // PUSH RANDOM SEED
-		glUniform3f(0, ro[0], ro[1], ro[2]);
-		glUniform2f(1, resolution[0], resolution[1]); // PUSH RESOLUTION
-		glUniform1i(2, time); // PUSH TIME
+
+		glUniform3f(0, ro[0], ro[1], ro[2]); // PUSH CAMERA
+		glUniform3f(1, ro[0]+look[0], ro[1]+look[1], ro[2]+look[2]); // PUSH FOCUS
+
+		glUniform1i(3, time); // PUSH TIME
+		
+		glfwGetWindowSize(window, &resolution[0], &resolution[1]); // GET RESOLUTION);
+		glUniform2f(2, resolution[0], resolution[1]); // PUSH RESOLUTION
+		
 		// DRAWING THE SQUARE
 		glEnableVertexAttribArray(0);
 		glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer);

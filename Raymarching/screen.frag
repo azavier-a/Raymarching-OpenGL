@@ -1,6 +1,6 @@
 #version 330 core
 
-#define FOV 1.
+#define FOV 1.1
 
 #define FAR_PLANE 100.
 #define HIT_DIST 0.01
@@ -28,6 +28,7 @@ uniform int time;
 uniform float seed;
 
 uniform vec3 cam;
+uniform vec3 foc;
 
 vec2 uv;
 
@@ -216,8 +217,8 @@ vec3 randomVec3(in vec3 point) {
   return normalize(ret);
 }
 
-vec3 LookAt(in vec3 ro, in vec3 foc){
-  vec3 to = normalize(foc - ro);
+vec3 LookAt(){
+  vec3 to = normalize(foc - cam);
   vec3 r = cross(to, vec3(0, 1, 0));
   vec3 up = cross(r, to);
     
@@ -225,17 +226,14 @@ vec3 LookAt(in vec3 ro, in vec3 foc){
 }
 vec3 PixelColor() {
 	vec3 pixelColor = vec3(0);
-	//vec3 ro = vec3(4, 0.1, 0);
-	vec3 foc = vec3(cam.x, cam.y, cam.z + 1.);
 
+	// vec3 off = 0.002*randomVec3(vec3(randomVec2(seed), seed));
+
+	vec3 rd = LookAt();
 	float[2] hit; // 0: hit distance (-1 if no hit)  1: materialID
-
-	vec3 off = 0.002*randomVec3(vec3(randomVec2(seed), seed));
-
-	vec3 rd = LookAt(cam, foc);
 	MarchScene(hit, cam, rd);
-	getTexelColor(pixelColor, hit, cam, rd);
 
+	getTexelColor(pixelColor, hit, cam, rd);
 	if(hit[0] > 0.) pixelColor *= GlobalIllumination(hit, cam, rd);
 
 	//pixelColor /= 3.;
