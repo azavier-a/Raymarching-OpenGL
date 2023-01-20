@@ -217,6 +217,9 @@ void input(GLFWwindow* window, float dT) {
 
 	float sp = SPEED * dT;
 
+	if (glfwGetKey(window, GLFW_KEY_LEFT_ALT) == GLFW_PRESS)
+		sp *= 0.25;
+
 	if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
 		ro += glm::vec3{ right[0] * sp, right[1] * sp, right[2] * sp };
 	else if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)

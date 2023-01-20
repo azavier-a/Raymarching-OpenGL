@@ -16,6 +16,9 @@
 
 #define REFLECTIONS 1
 
+#define FRE 0
+
+#define AO 1
 #define AO_SAMPLES 5.
 
 #define PI 3.141592
@@ -176,7 +179,6 @@ vec3 GlobalIllumination(in float[2] hit, in vec3 ro, in vec3 rd) {
 
 	Material mat = getMaterial(int(hit[1]));
 
-	float direct_light = 1.;
 	vec3 ambient = AMBIENT_PERCENT, diffuse, specular;
 	for(int i = 0; i < pointLights.length(); i++) {
 		pointLights[i].pos.xz *= rotationMatrix(time*i*TAU/4000);
@@ -199,12 +201,16 @@ vec3 GlobalIllumination(in float[2] hit, in vec3 ro, in vec3 rd) {
 	specular = clamp(specular, 0., 1.);
 
 	// fresnel term
-	float fre = pow( clamp(dot(normal, rd) + 1., .0, 1.), 1.);
+	float fre = 1.;
+	if(FRE == 1)
+		fre = pow( clamp(dot(normal, rd) + 1., .0, 1.), 1.);
 
-	float occ = calculateAO(point, normal);
+	float occ = 1.;
+	if(AO == 1) 
+		occ = calculateAO(point, normal);
 
 	vec3 global = mat.albedo*(AMBIENT*ambient + DIFFUSE*diffuse + SPECULAR*specular) + EMISSIVE*mat.emissive*mat.albedo;
-	return global*direct_light*fre*occ;
+	return global*fre*occ;
 }
 
 float Hash21(in vec2 hash) {

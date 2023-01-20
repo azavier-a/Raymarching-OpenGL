@@ -29,7 +29,7 @@ Time Controls:
 |4   |1x              |
 |5   |2x              |
 Movement Controls:
-|Key     |Direction       |
+|Key     |Control         |
 |--------|----------------|
 |W       |FRONT           |
 |A       |LEFT            |
@@ -37,6 +37,7 @@ Movement Controls:
 |D       |RIGHT           |
 |SPACE   |UP              |
 |SHIFT   |DOWN            |
+|ALT     |0.25 MOVE SPEED |
 Camera Controls:
 |Key      |Direction       |
 |---------|----------------|
