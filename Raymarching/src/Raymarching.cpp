@@ -8,9 +8,6 @@
 #include <windows.h>
 #include <glm/matrix.hpp>
 
-#define STB_IMAGE_IMPLEMENTATION
-#include <../stb_image.h>
-
 #define EXIT_FAIL() return -1
 #define ASSERT_PAUSE() if (pause != NULL) { epoch += (currentTimeMillis() - pause); pause = NULL; }
 
@@ -136,6 +133,7 @@ int GLFW_INIT() {
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
 	glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE); // To make MacOS happy
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+	return 0;
 }
 GLFWwindow* createWindow(int wid, int hei, const char* name) {
 	GLFWwindow* win = glfwCreateWindow(wid, hei, name, NULL, NULL);
@@ -170,7 +168,7 @@ int scroll = 1;
 long long pause = NULL;
 auto epoch = currentTimeMillis();
 
-glm::vec3 ro = { 0.0f, 1.0f, -4.0f };
+glm::vec3 ro = { 0.0f, 0.0f, -8.0f };
 
 float xa = 0.0f, ya = 0.0f;
 glm::vec3 look = { 0.0f, 0.0f, 1.0f };
@@ -237,7 +235,7 @@ void input(GLFWwindow* window, float dT) {
 
 	float dx = PI / 264.;
 	sp = CAM_SPEED * dT;
-	look[1] = glm::clamp(look[1], -1.0f, 1.0f);
+	look[1] = glm::clamp(look[1], -1.2f, 1.2f);
 
 	if(glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS) {
 		float c = std::cos(dx), s = std::sin(dx);

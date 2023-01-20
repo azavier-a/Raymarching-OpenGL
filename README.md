@@ -20,11 +20,27 @@
 > 4th component of color is intensity, radius is the reach of the light.
 </details>
 
-Controls:
-|Key |Time multiplier |
+Time Controls:
+|Key |Multiplier      |
 |----|----------------|
-|1   |-2x             |
-|2   |-1x             |
-|3   |1x              |
-|4   |2x              |
-|W   |0x              |
+|2   |-2x             |
+|3   |-1x             |
+|E   |0x              |
+|4   |1x              |
+|5   |2x              |
+Movement Controls:
+|Key     |Direction       |
+|--------|----------------|
+|W       |FRONT           |
+|A       |LEFT            |
+|S       |BACK            |
+|D       |RIGHT           |
+|SPACE   |UP              |
+|SHIFT   |DOWN            |
+Camera Controls:
+|Key      |Direction       |
+|---------|----------------|
+|UP ARW   |UP              |
+|LEFT ARW |LEFT            |
+|DOWN ARW |DOWN            |
+|RIGHT ARW|RIGHT           |
