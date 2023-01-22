@@ -7,12 +7,14 @@
 #include <stdio.h>
 #include <windows.h>
 #include <glm/matrix.hpp>
+#include <iostream>
 
 #define EXIT_FAIL() return -1
 #define ASSERT_PAUSE() if (pause != NULL) { epoch += (currentTimeMillis() - pause); pause = NULL; }
 
 #define SPEED 12.
-#define CAM_SPEED 20
+#define CAMX_SPEED 150
+#define CAMY_SPEED 40
 
 #define PI 3.141592
 #define TAU 6.283184
@@ -168,10 +170,17 @@ int scroll = 1;
 long long pause = NULL;
 auto epoch = currentTimeMillis();
 
-glm::vec3 ro = { 0.0f, 0.0f, -8.0f };
+glm::vec3 FWD = { 0.0f, 0.0f, 1.0f };
+glm::vec3 UP = { 0.0f, 1.0f, 0.0f };
+glm::vec3 RGT = { 1.0f, 0.0f, 0.0f };
 
-float xa = 0.0f, ya = 0.0f;
-glm::vec3 look = { 0.0f, 0.0f, 1.0f };
+// A X B = (a[1]b[2]-a[2]b[1])(x) + (a[2]b[0]-a[0]b[2])(y) + (a[0]b[1]-a[1]b[0])(z)
+
+// RGT = UP X FWD = -(FWD X UP)
+
+glm::vec3 ro = { 0.0f, 0.0f, -8.0f };
+glm::vec3 fwd = { 0.0f, 0.0f, 1.0f };
+glm::vec3 rgt = { 1.0f, 0.0f, 0.0f };
 
 void timeFlow() {
 	switch (scroll) {
@@ -212,50 +221,61 @@ void input(GLFWwindow* window, float dT) {
 		scroll = 2;
 	}
 	// CAMERA
-	glm::vec3 right = glm::cross(look, glm::vec3{ 0.0f, 1.0f, 0.0f });
-	glm::vec3 up = -glm::cross(look, right);
+	
+	glm::vec3 up = glm::cross(fwd, rgt);
 
-	float sp = SPEED * dT;
+	float sp = SPEED * dT, cx = CAMX_SPEED * dT, cy = CAMY_SPEED * dT * 0.05f;
 
-	if (glfwGetKey(window, GLFW_KEY_LEFT_ALT) == GLFW_PRESS)
+	if (glfwGetKey(window, GLFW_KEY_LEFT_ALT) == GLFW_PRESS) {
 		sp *= 0.25;
+		cx *= 0.25;
+		cy *= 0.25;
+	}
 
 	if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-		ro += glm::vec3{ right[0] * sp, right[1] * sp, right[2] * sp };
+		ro += rgt * sp;
 	else if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-		ro -= glm::vec3{ right[0] * sp, right[1] * sp, right[2] * sp };
+		ro -= rgt * sp;
 
 	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-		ro += glm::vec3{ look[0] * sp, look[1] * sp, look[2] * sp };
+		ro += fwd * sp;
 	else if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-		ro -= glm::vec3{ look[0] * sp, look[1] * sp, look[2] * sp };
+		ro -= fwd * sp;
 
 	if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS)
-		ro += glm::vec3{ up[0] * sp, up[1] * sp, up[2] * sp };
+		ro += up * sp;
 	else if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS)
-		ro -= glm::vec3{ up[0] * sp, up[1] * sp, up[2] * sp };
+		ro -= up * sp;
 
 
-	float dx = PI / 264.;
-	sp = CAM_SPEED * dT;
-	look[1] = glm::clamp(look[1], -1.2f, 1.2f);
-
-	if(glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS) {
-		float c = std::cos(dx), s = std::sin(dx);
-		look = glm::mat3x3{ c, 0.0f, s, 0.0f, 1.0f, 0.0f, -s, 0.0f, c } * look;
-	} else if(glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS) {
-		float c = std::cos(dx), s = std::sin(dx);
-		look = glm::mat3x3{ c, 0.0f, -s, 0.0f, 1.0f, 0.0f, s, 0.0f, c } * look;
-	}
-	dx = PI / 512.;
-	sp *= 0.05;
+	float dx = PI / 512.0f;
 	if(glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS) {
 		float c = std::cos(dx), s = std::sin(dx);
-		look += glm::vec3(0.0f, c*sp, -s*sp);
+		fwd += glm::vec3(0.0f, c, -s)*cy;
 	} else if(glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS) {
 		float c = std::cos(dx), s = std::sin(dx);
-		look += glm::vec3(0.0f, -c*sp, s*sp);
+		fwd += glm::vec3(0.0f, -c, s)*cy;
 	}
+
+	dx = PI / 264.0f;
+	dx *= cx;
+	if(glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS) {
+		float c = std::cos(dx), s = std::sin(dx);
+		glm::mat3x3 mat { c, 0.0f, -s, 0.0f, 1.0f, 0.0f, s, 0.0f, c };
+		fwd = mat * fwd;
+		rgt = mat * rgt;
+	} else if(glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS) {
+		float c = std::cos(dx), s = std::sin(dx);
+		glm::mat3x3 mat { c, 0.0f, s, 0.0f, 1.0f, 0.0f, -s, 0.0f, c };
+		fwd = mat * fwd;
+		rgt = mat * rgt;
+	}
+
+	fwd = glm::normalize(fwd);
+	rgt = glm::normalize(rgt);
+
+	//std::cout << "(" << up.x << ", " << up.y << ", " << up.z << ") " << "(" << rgt.x << ", " << rgt.y << ", " << rgt.z << ")";
+	//system("cls");
 }
 int main() {
 
@@ -309,7 +329,7 @@ int main() {
 		glUniform1f(-1, (float)random_double(0, 10000000)); // PUSH RANDOM SEED
 
 		glUniform3f(0, ro[0], ro[1], ro[2]); // PUSH CAMERA
-		glUniform3f(1, ro[0]+look[0], ro[1]+look[1], ro[2]+look[2]); // PUSH FOCUS
+		glUniform3f(1, ro[0]+fwd[0], ro[1]+fwd[1], ro[2]+fwd[2]); // PUSH FOCUS
 
 		glUniform1i(3, time); // PUSH TIME
 		

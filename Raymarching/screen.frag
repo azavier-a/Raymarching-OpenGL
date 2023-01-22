@@ -1,15 +1,17 @@
 #version 330 core
 
-#define FOV 1.1
+#define FOV 1.
 
-#define FAR_PLANE 100.
+#define BACKGROUND(dir) dir*0.5+0.5
+
+#define FAR_PLANE 200.
 #define HIT_DIST 0.01
 
 #define AMBIENT_PERCENT vec3(0.03)
 
 #define AMBIENT 1.
 #define DIFFUSE 1.
-#define SPECULAR 2.
+#define SPECULAR 1.
 #define EMISSIVE 1.
 
 #define SPECULAR_FALLOFF 40.
@@ -148,7 +150,7 @@ void getTexelColor(inout vec3 albedo, in float[2] hit, in vec3 ro, in vec3 rd) {
 	switch(int(hit[1])) {
 		case 0:
 			rd.xz *= rotationMatrix(time/5000.);
-			albedo = rd+0.5;
+			albedo = BACKGROUND(rd);
 			break;
 		case 1:
 			point.xz *= rotationMatrix(PI/4.);
@@ -233,8 +235,10 @@ vec3 randomVec3(in vec3 point) {
 }
 
 vec3 LookAt(){
+  // a cross b = (aybz-azby, axbz-azbx, axby-aybx)
+
   vec3 to = normalize(foc - cam);
-  vec3 r = cross(to, vec3(0, 1, 0));
+  vec3 r = cross(vec3(0, 1, 0), to);
   vec3 up = cross(r, to);
     
   return normalize((uv.x*r + uv.y*up)*FOV + to);
@@ -252,15 +256,22 @@ vec3 PixelColor() {
 	if(hit[0] > 0.) pixelColor *= GlobalIllumination(hit, cam, rd);
 
 	//pixelColor /= 3.;
+	rd.xz *= rotationMatrix(time/5000.);
+	return mix(pixelColor, BACKGROUND(rd), smoothstep(0., FAR_PLANE, hit[0]));
+}
 
-	return pixelColor;
+void mainImage(out vec3 pixelColor, in vec2 fragCoord) {
+	uv = (fragCoord - 0.5*resolution)/resolution.y;
+
+	uv.y = -uv.y;
+
+	pixelColor += PixelColor();
 }
 
 void main(){
-	uv = (gl_FragCoord.xy - 0.5*resolution)/resolution.y;
-	vec3 pixelColor = vec3(0);
+	vec3 pixelColor;
 
-	pixelColor += PixelColor();
+	mainImage(pixelColor, gl_FragCoord.xy);
 
-	color = vec3(sqrt(clamp(pixelColor, 0., 1.)));
+	color = sqrt(clamp(pixelColor, 0., 1.)); // Light gamma correction
 }
