@@ -254,21 +254,6 @@ void input(GLFWwindow* window, double dT) {
 		sp *= 2.;
 	}
 
-	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-		ro += fwd * sp;
-	if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-		ro -= fwd * sp;
-
-	if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-		ro += normalize(cross(up, fwd)) * sp;
-	if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-		ro -= normalize(cross(up, fwd)) * sp;
-
-	if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS)
-		ro += up * sp;
-	if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS)
-		ro -= up * sp;
-
 	if(glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS) {
 		pitch += cy;
 
@@ -297,7 +282,6 @@ void input(GLFWwindow* window, double dT) {
 		fwd = normalize(fwd);
 		up = cross(fwd, normalize(cross(glm::vec3{ 0.0f,1.0f,0.0f }, fwd)));
 	}
-
 	if(glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS) {
 		yaw -= cx;
 
@@ -312,6 +296,19 @@ void input(GLFWwindow* window, double dT) {
 		fwd.z = sin(radians(yaw)) * cos(radians(pitch));
 		fwd = normalize(fwd);
 	}
+
+	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+		ro += fwd * sp;
+	if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+		ro -= fwd * sp;
+	if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+		ro += cross(up, fwd) * sp;
+	if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+		ro -= cross(up, fwd) * sp;
+	if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS)
+		ro += up * sp;
+	if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS)
+		ro -= up * sp;
 }
 int main() {
 	if (GLFW_INIT() == -1)

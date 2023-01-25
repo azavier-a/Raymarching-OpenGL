@@ -156,7 +156,7 @@ void getTexelColor(inout vec3 albedo, in float[2] hit, in vec3 ro, in vec3 rd) {
 			break;
 		default:
 			albedo = getMaterial(int(hit[1])).albedo;
-			//albedo = SurfaceNormal(point)*0.5+0.5;
+			//albedo = SurfaceNormal(ro + rd*hit[0])+0.5;
 			break;
 	}
  }
