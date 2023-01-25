@@ -10,14 +10,17 @@
 #include <iostream>
 
 #define EXIT_FAIL() return -1
+#define EXIT_PASS() return 0
 #define ASSERT_PAUSE() if (pause != NULL) { epoch += (currentTimeMillis() - pause); pause = NULL; }
 
-#define SPEED 12.
-#define CAMX_SPEED 150
-#define CAMY_SPEED 40
+#define SPEED 15.
+#define CAMX_SPEED 90.
+#define CAMY_SPEED 60.
 
 #define PI 3.141592
 #define TAU 6.283184
+
+#define radians(degrees) degrees * 0.01745329251994329576923690768489
 
 /******||UTILS||******/
 
@@ -170,19 +173,43 @@ int scroll = 1;
 long long pause = NULL;
 auto epoch = currentTimeMillis();
 
-glm::vec3 FWD = { 0.0f, 0.0f, 1.0f };
-glm::vec3 UP = { 0.0f, 1.0f, 0.0f };
-glm::vec3 RGT = { 1.0f, 0.0f, 0.0f };
-
 // A X B = (a[1]b[2]-a[2]b[1])(x) + (a[2]b[0]-a[0]b[2])(y) + (a[0]b[1]-a[1]b[0])(z)
 
 // RGT = UP X FWD = -(FWD X UP)
+// UP = FWD X RGT
 
+
+float pitch = 0.0f, yaw = 89.0f;
 glm::vec3 ro = { 0.0f, 0.0f, -8.0f };
 glm::vec3 fwd = { 0.0f, 0.0f, 1.0f };
-glm::vec3 rgt = { 1.0f, 0.0f, 0.0f };
+glm::vec3 up = { 0.0f, 1.0f, 0.0f };
 
-void timeFlow() {
+int timeInput(GLFWwindow* window) {
+	if (glfwGetKey(window, GLFW_KEY_2) == GLFW_PRESS) {
+		ASSERT_PAUSE();
+		return -2;
+	}
+	if (glfwGetKey(window, GLFW_KEY_3) == GLFW_PRESS) {
+		ASSERT_PAUSE();
+		return -1;
+	}
+	if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS && pause == NULL) {
+		pause = currentTimeMillis();
+		return 0;
+	}
+	if (glfwGetKey(window, GLFW_KEY_4) == GLFW_PRESS) {
+		ASSERT_PAUSE();
+		return 1;
+	}
+	if (glfwGetKey(window, GLFW_KEY_5) == GLFW_PRESS) {
+		ASSERT_PAUSE();
+		return 2;
+	}
+	return scroll;
+}
+void timeFlow(GLFWwindow* window) {
+	scroll = timeInput(window);
+
 	switch (scroll) {
 		case -2:
 			epoch += 25;
@@ -198,96 +225,87 @@ void timeFlow() {
 			break;
 	}
 }
-void input(GLFWwindow* window, float dT) {
-	// TIME
-	if (glfwGetKey(window, GLFW_KEY_2) == GLFW_PRESS) {
-		ASSERT_PAUSE();
-		scroll = -2;
-	}
-	else if (glfwGetKey(window, GLFW_KEY_3) == GLFW_PRESS) {
-		ASSERT_PAUSE();
-		scroll = -1;
-	}
-	else if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS && pause == NULL) {
-		pause = currentTimeMillis();
-		scroll = 0;
-	}
-	else if (glfwGetKey(window, GLFW_KEY_4) == GLFW_PRESS) {
-		ASSERT_PAUSE();
-		scroll = 1;
-	}
-	else if (glfwGetKey(window, GLFW_KEY_5) == GLFW_PRESS) {
-		ASSERT_PAUSE();
-		scroll = 2;
-	}
+void input(GLFWwindow* window, double dT) {
 	// CAMERA
-	
-	glm::vec3 up = glm::cross(fwd, rgt);
 
-	float sp = SPEED * dT, cx = CAMX_SPEED * dT, cy = CAMY_SPEED * dT * 0.05f;
+	float sp = SPEED * dT, cx = CAMX_SPEED * dT, cy = CAMY_SPEED * dT;
 
 	if (glfwGetKey(window, GLFW_KEY_LEFT_ALT) == GLFW_PRESS) {
 		sp *= 0.25;
 		cx *= 0.25;
 		cy *= 0.25;
 	}
-
-	if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-		ro += rgt * sp;
-	else if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-		ro -= rgt * sp;
+	if (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS) {
+		sp *= 2.;
+	}
 
 	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
 		ro += fwd * sp;
-	else if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+	if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
 		ro -= fwd * sp;
+
+	if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+		ro += normalize(cross(up, fwd)) * sp;
+	if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+		ro -= normalize(cross(up, fwd)) * sp;
 
 	if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS)
 		ro += up * sp;
-	else if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS)
+	if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS)
 		ro -= up * sp;
 
-
-	float dx = PI / 512.0f;
 	if(glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS) {
-		float c = std::cos(dx), s = std::sin(dx);
-		fwd += glm::vec3(0.0f, c, -s)*cy;
-	} else if(glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS) {
-		float c = std::cos(dx), s = std::sin(dx);
-		fwd += glm::vec3(0.0f, -c, s)*cy;
+		pitch += cy;
+
+		if (pitch > 89.0f)
+			pitch = 89.0f;
+		if (pitch < -89.0f)
+			pitch = -89.0f;
+
+		fwd.x = cos(radians(yaw)) * cos(radians(pitch));
+		fwd.y = sin(radians(pitch));
+		fwd.z = sin(radians(yaw)) * cos(radians(pitch));
+		fwd = normalize(fwd);
+		up = cross(fwd, normalize(cross(glm::vec3{ 0.0f,1.0f,0.0f }, fwd)));
+	} 
+	if(glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS) {
+		pitch -= cy;
+
+		if (pitch > 89.0f)
+			pitch = 89.0f;
+		if (pitch < -89.0f)
+			pitch = -89.0f;
+
+		fwd.x = cos(radians(yaw)) * cos(radians(pitch));
+		fwd.y = sin(radians(pitch));
+		fwd.z = sin(radians(yaw)) * cos(radians(pitch));
+		fwd = normalize(fwd);
+		up = cross(fwd, normalize(cross(glm::vec3{ 0.0f,1.0f,0.0f }, fwd)));
 	}
 
-	dx = PI / 264.0f;
-	dx *= cx;
 	if(glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS) {
-		float c = std::cos(dx), s = std::sin(dx);
-		glm::mat3x3 mat { c, 0.0f, -s, 0.0f, 1.0f, 0.0f, s, 0.0f, c };
-		fwd = mat * fwd;
-		rgt = mat * rgt;
-	} else if(glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS) {
-		float c = std::cos(dx), s = std::sin(dx);
-		glm::mat3x3 mat { c, 0.0f, s, 0.0f, 1.0f, 0.0f, -s, 0.0f, c };
-		fwd = mat * fwd;
-		rgt = mat * rgt;
+		yaw -= cx;
+
+		fwd.x = cos(radians(yaw)) * cos(radians(pitch));
+		fwd.z = sin(radians(yaw)) * cos(radians(pitch));
+		fwd = normalize(fwd);
 	}
+	if(glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS) {
+		yaw += cx;
 
-	fwd = glm::normalize(fwd);
-	rgt = glm::normalize(rgt);
-
-	//std::cout << "(" << up.x << ", " << up.y << ", " << up.z << ") " << "(" << rgt.x << ", " << rgt.y << ", " << rgt.z << ")";
-	//system("cls");
+		fwd.x = cos(radians(yaw)) * cos(radians(pitch));
+		fwd.z = sin(radians(yaw)) * cos(radians(pitch));
+		fwd = normalize(fwd);
+	}
 }
 int main() {
-
-	// WINDOW INIT
-
-	if(GLFW_INIT() == -1)
+	if (GLFW_INIT() == -1)
 		EXIT_FAIL();
-	
+
 	GLFWwindow* window = createWindow(1080, 720, "Ray Marching");
-	if(window == NULL)
+	if (window == NULL)
 		EXIT_FAIL();
-	
+
 	glfwSetInputMode(window, GLFW_STICKY_KEYS, GL_TRUE);
 
 	// VERTEX ARRAY/BUFFER
@@ -304,37 +322,42 @@ int main() {
 	unsigned int screen = LoadShaders("screen.vert", "screen.frag");
 	glUseProgram(screen);
 	
-	auto launch = currentTimeMillis();
-	int time;
+	// auto launch = currentTimeMillis();
+	int time = 0;
 
 	// MAIN LOOP
-	long long last = currentTimeMillis(), cur;
-	float dT;
+	long long last = currentTimeMillis();
+	double dT;
 	do {
 		// deltaTime calculations.
-		cur = currentTimeMillis();
-		dT = 0.001f * (cur - last);
+		auto cur = currentTimeMillis();
+		dT = 0.001 * (cur - last);
 		last = cur;
 		
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		
 		// INPUT SECTION
 		input(window, dT);
-
+		//std::cout << "(" << ro.x << ", " << ro.y << ", " << ro.z << ") " << dT;
+		//system("cls");
+ 
 		// TIME MANIPULATION (???)
-		timeFlow(); // changes the 'epoch' which is the time my program thinks it started. if you add/subtract small amounts repeatedly, it simulates the motion through time.
+		timeFlow(window); // changes the 'epoch' which is the time my program thinks it started. if you add/subtract small amounts repeatedly, it simulates the motion through time.
 		if(scroll != 0) time = int(currentTimeMillis() - epoch);
 
 		// UNIFORMS
-		glUniform1f(-1, (float)random_double(0, 10000000)); // PUSH RANDOM SEED
 
-		glUniform3f(0, ro[0], ro[1], ro[2]); // PUSH CAMERA
-		glUniform3f(1, ro[0]+fwd[0], ro[1]+fwd[1], ro[2]+fwd[2]); // PUSH FOCUS
+		glfwGetWindowSize(window, &resolution[0], &resolution[1]); // GET RESOLUTION
+		glViewport(0, 0, resolution[0], resolution[1]);
+		glUniform2f(glGetUniformLocation(screen, "res"), resolution[0], resolution[1]); // PUSH RESOLUTION
 
-		glUniform1i(3, time); // PUSH TIME
-		
-		glfwGetWindowSize(window, &resolution[0], &resolution[1]); // GET RESOLUTION);
-		glUniform2f(2, resolution[0], resolution[1]); // PUSH RESOLUTION
+		glUniform1i(glGetUniformLocation(screen, "time"), time); // PUSH TIME
+
+		glUniform1f(glGetUniformLocation(screen, "seed"), (float)random_double(0, 10000000)); // PUSH RANDOM SEED
+
+		glUniform3f(glGetUniformLocation(screen, "cam"), ro[0], ro[1], ro[2]); // PUSH CAMERA
+
+		glUniform3f(glGetUniformLocation(screen, "look"), fwd[0], fwd[1], fwd[2]); // PUSH LOOK
 		
 		// DRAWING THE SQUARE
 		glEnableVertexAttribArray(0);
@@ -349,5 +372,5 @@ int main() {
 	} while( (glfwGetKey(window, GLFW_KEY_ESCAPE) != GLFW_PRESS) && (glfwWindowShouldClose(window) == 0) );
 
 	glfwTerminate();
-	EXIT_SUCCESS();
+	EXIT_PASS();
 }

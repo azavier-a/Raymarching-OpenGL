@@ -38,7 +38,8 @@ Movement Controls:
 |D       |RIGHT           |
 |SPACE   |UP              |
 |SHIFT   |DOWN            |
-|ALT     |0.25 MOVE SPEED |
+|ALT     |0.25x MOVE SPEED|
+|CTRL    |2x MOVE SPEED   |
 
 Camera Controls:
 |Key      |Direction       |

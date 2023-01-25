@@ -4,7 +4,7 @@
 
 #define BACKGROUND(dir) dir*0.5+0.5
 
-#define FAR_PLANE 200.
+#define FAR 300.
 #define HIT_DIST 0.01
 
 #define AMBIENT_PERCENT vec3(0.03)
@@ -28,12 +28,12 @@
 
 out vec3 color;
 
-uniform vec2 resolution;
+uniform vec2 res;
 uniform int time;
 uniform float seed;
 
 uniform vec3 cam;
-uniform vec3 foc;
+uniform vec3 look;
 
 vec2 uv;
 
@@ -53,9 +53,9 @@ struct PointLight {
 	vec4 col;
 	float radius;
 } pointLights[] = PointLight[](
-	PointLight(5.*vec3(sin(PI/3.), 2, cos(PI/3.)), vec4(0, 0, 1, 2), 100.),
-	PointLight(5.*vec3(sin(2.*PI/3.), 2, cos(2.*PI/3.)), vec4(1, 0, 0, 2), 100.),
-	PointLight(5.*vec3(0., 2, 1.), vec4(0, 1, 0, 2), 100.)
+	PointLight(5.*vec3(sin(PI/3.), 2, cos(PI/3.)), vec4(0, 0, 1, 2), 120.),
+	PointLight(5.*vec3(sin(2.*PI/3.), 2, cos(2.*PI/3.)), vec4(1, 0, 0, 2), 120.),
+	PointLight(5.*vec3(0., 2, 1.), vec4(0, 1, 0, 2), 120.)
 );
 
 mat2 rotationMatrix(in float angle) {
@@ -67,7 +67,7 @@ float SignedBoxDistance(in vec3 worldDataP, in vec3 worldDataD) { return length(
 float SignedRoundedBoxDistance(in vec3 worldDataP, in vec4 worldDataD) { return SignedBoxDistance(worldDataP, worldDataD.xyz - worldDataD.w) - worldDataD.w; }
 float SignedTorusDistance(in vec3 p, in float r1, in float r2) { return length(vec2(length(p.xy)-r1,p.z))-r2; }
 float[2] SceneDistance(in vec3 p) {
-	float[2] data = float[](FAR_PLANE, 0);
+	float[2] data = float[](FAR, 0);
 	
 	
 	float ground = p.y+10.;
@@ -126,16 +126,16 @@ vec3 SurfaceNormal(in vec3 point) {
 void MarchScene(out float[2] hit, in vec3 ro, in vec3 rd) {
 	float[2] data; // 0: distance to scene  1: materialID
 	
-	for(hit[0] = 0.; hit[0] <= FAR_PLANE;) {
+	for(hit[0] = 0.; hit[0] <= FAR;) {
 		data = SceneDistance(ro + rd*hit[0]);
 
-		if(data[0] < HIT_DIST) 
+		if(abs(data[0]) < HIT_DIST) 
 			break;
 
 		hit[0] += data[0];
 	}
 
-	if(hit[0] > FAR_PLANE)
+	if(hit[0] > FAR)
 		hit[0] = -1;
 	else
 		hit[1] = data[1];
@@ -149,8 +149,6 @@ void getTexelColor(inout vec3 albedo, in float[2] hit, in vec3 ro, in vec3 rd) {
 	vec3 point = ro + rd*hit[0];
 	switch(int(hit[1])) {
 		case 0:
-			rd.xz *= rotationMatrix(time/5000.);
-			albedo = BACKGROUND(rd);
 			break;
 		case 1:
 			point.xz *= rotationMatrix(PI/4.);
@@ -183,11 +181,11 @@ vec3 GlobalIllumination(in float[2] hit, in vec3 ro, in vec3 rd) {
 
 	vec3 ambient = AMBIENT_PERCENT, diffuse, specular;
 	for(int i = 0; i < pointLights.length(); i++) {
-		pointLights[i].pos.xz *= rotationMatrix(time*i*TAU/4000);
+		pointLights[i].pos.xz *= rotationMatrix(time*i*TAU*0.0004);
 		vec3 lightVector = pointLights[i].pos - point;
 		float lightDistance = length(lightVector);
 
-		if(lightDistance > pointLights[i].radius) continue;
+		if(lightDistance > pointLights[i].radius + length(pointLights[i].pos - ro)) continue;
 
 		lightVector = normalize(lightVector);
 
@@ -202,17 +200,12 @@ vec3 GlobalIllumination(in float[2] hit, in vec3 ro, in vec3 rd) {
 	}
 	specular = clamp(specular, 0., 1.);
 
-	// fresnel term
-	float fre = 1.;
-	if(FRE == 1)
-		fre = pow( clamp(dot(normal, rd) + 1., .0, 1.), 1.);
-
 	float occ = 1.;
 	if(AO == 1) 
 		occ = calculateAO(point, normal);
 
-	vec3 global = mat.albedo*(AMBIENT*ambient + DIFFUSE*diffuse + SPECULAR*specular) + EMISSIVE*mat.emissive*mat.albedo;
-	return global*fre*occ;
+	vec3 global = AMBIENT*ambient + DIFFUSE*diffuse + SPECULAR*specular + EMISSIVE*mat.emissive;
+	return mat.albedo*global*occ;
 }
 
 float Hash21(in vec2 hash) {
@@ -236,12 +229,10 @@ vec3 randomVec3(in vec3 point) {
 
 vec3 LookAt(){
   // a cross b = (aybz-azby, axbz-azbx, axby-aybx)
-
-  vec3 to = normalize(foc - cam);
-  vec3 r = cross(vec3(0, 1, 0), to);
-  vec3 up = cross(r, to);
+  vec3 r = normalize(cross(vec3(0, 1, 0), look));
+  vec3 up = cross(r, look);
     
-  return normalize((uv.x*r + uv.y*up)*FOV + to);
+  return normalize((uv.x*r - uv.y*up)*FOV + look);
 }
 vec3 PixelColor() {
 	vec3 pixelColor;
@@ -249,21 +240,25 @@ vec3 PixelColor() {
 	// vec3 off = 0.002*randomVec3(vec3(randomVec2(seed), seed));
 
 	vec3 rd = LookAt();
+
 	float[2] hit; // 0: hit distance (-1 if no hit)  1: materialID
 	MarchScene(hit, cam, rd);
 
-	getTexelColor(pixelColor, hit, cam, rd);
-	if(hit[0] > 0.) pixelColor *= GlobalIllumination(hit, cam, rd);
+	vec2 bdir = rd.xz*rotationMatrix(time*0.0005);
+	vec3 bgCol = BACKGROUND(vec3(bdir.x, rd.y, bdir.y));
 
-	//pixelColor /= 3.;
-	rd.xz *= rotationMatrix(time/5000.);
-	return mix(pixelColor, BACKGROUND(rd), smoothstep(0., FAR_PLANE, hit[0]));
+	if(hit[0] > 0.) {
+		getTexelColor(pixelColor, hit, cam, rd);
+		pixelColor *= GlobalIllumination(hit, cam, rd);
+	} else return bgCol;
+
+	pixelColor = mix(pixelColor, bgCol, smoothstep(10., FAR, hit[0])); // backgroud fog
+
+	return pixelColor;
 }
 
 void mainImage(out vec3 pixelColor, in vec2 fragCoord) {
-	uv = (fragCoord - 0.5*resolution)/resolution.y;
-
-	uv.y = -uv.y;
+	uv = (fragCoord - 0.5*res)/res.y;
 
 	pixelColor += PixelColor();
 }
