@@ -4,7 +4,7 @@
 
 #define BACKGROUND(dir) dir*0.5+0.5
 
-#define FAR 300.
+#define FAR 250.
 #define NEAR 0.2414
 #define HIT_DIST 0.01
 
@@ -123,22 +123,18 @@ vec3 SurfaceNormal(in vec3 point) {
   return normalize(sdf(point)[0] - gradient);
 }
 
-void MarchScene(out float[2] hit, in vec3 ro, in vec3 rd) {
-	float[2] data; // 0: distance to scene  1: materialID
+float[2] trace(in vec3 ro, in vec3 rd) {
+	float dist = 0.;
 	
-	for(hit[0] = 0.; hit[0] <= FAR;) {
-		data = sdf(ro + rd*hit[0]);
+	for(dist = 0.; dist < FAR;) {
+		float[2] data = sdf(ro + rd*dist);
 
 		if(abs(data[0]) < HIT_DIST) 
-			break;
+			return float[2](dist, data[1]); // 0: distance to scene along ray  1: materialID
 
-		hit[0] += data[0];
+		dist += data[0];
 	}
-
-	if(hit[0] > FAR)
-		hit[0] = -1;
-	else
-		hit[1] = data[1];
+	return float[2](-1., 0.);
 }
 
 Material getMaterial(int index) {
@@ -238,8 +234,8 @@ vec3 PixelColor(vec2 uv) {
 
 	vec3 rd = LookAt(uv);
 
-	float[2] hit; // 0: hit distance (-1 if no hit)  1: materialID
-	MarchScene(hit, cam, rd);
+	float[2] hit = trace(cam, rd); // 0: hit distance (-1 if no hit)  1: materialID
+	
 
 	vec2 bdir = rd.xz*rotationMatrix(time*0.0005);
 	vec3 bgCol = BACKGROUND(vec3(bdir.x, rd.y, bdir.y));
