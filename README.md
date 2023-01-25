@@ -5,15 +5,13 @@
 
 > Open the file in an editor
 
-> The SceneDistance function is where the scene is built. By default, there are examples of rotations and translations. Some distance functions are provided.
+> The sdf function is where the scene is built. By default, there are examples of rotations and translations. Some distance functions are provided.
 
 > Materials can be custom made by simply making more material structs in the materials array. When applying a material, they are 1-indexed. the first material has index 1.
 
 > Material constructor: Material(vec3 albedo, float roughness, float metallicity, float emissive)
 
-> The position and focus of the camera is handled at the top of the PixelColor function
-
-> You can add lights by appending more onto the pointLights array.
+> You can add lights by appending more onto the pointLights array. If you do this, you might want to remove my loop in mainImage that loops through the entire array and moves the lights. this is an example of how to manipulate the light positions with sin waves.
 
 > Light constructor: PointLight(vec3 position, vec4 color, float radius)
 

@@ -5,6 +5,7 @@
 #define BACKGROUND(dir) dir*0.5+0.5
 
 #define FAR 300.
+#define NEAR 0.2414
 #define HIT_DIST 0.01
 
 #define AMBIENT_PERCENT vec3(0.03)
@@ -35,8 +36,6 @@ uniform float seed;
 uniform vec3 cam;
 uniform vec3 look;
 
-vec2 uv;
-
 struct Material {
 	vec3 albedo;
 	float roughness;
@@ -62,72 +61,73 @@ mat2 rotationMatrix(in float angle) {
 	float s = sin(angle), c = cos(angle);
 	return mat2(c, -s, s, c);
 }
-float SignedSphereDistance(in vec3 pos, in float r) { return length(pos) - r; }
-float SignedBoxDistance(in vec3 worldDataP, in vec3 worldDataD) { return length(max(abs(worldDataP) - worldDataD, vec3(0))); }
-float SignedRoundedBoxDistance(in vec3 worldDataP, in vec4 worldDataD) { return SignedBoxDistance(worldDataP, worldDataD.xyz - worldDataD.w) - worldDataD.w; }
-float SignedTorusDistance(in vec3 p, in float r1, in float r2) { return length(vec2(length(p.xy)-r1,p.z))-r2; }
-float[2] SceneDistance(in vec3 p) {
+float sdfSphere(in vec3 pos, in float r) { return length(pos) - r; }
+float sdfBox( vec3 p, vec3 s ) { 
+	p = abs(p)-s;
+	return length(max(p, 0.))+min(max(p.x, max(p.y, p.z)), 0.);
+}
+float sdfRoundedBox(in vec3 worldDataP, in vec4 worldDataD) { return sdfBox(worldDataP, worldDataD.xyz - worldDataD.w) - worldDataD.w; }
+float sdfTorus(in vec3 p, in float r1, in float r2) { return length(vec2(length(p.xy)-r1,p.z))-r2; }
+float[2] sdf(in vec3 p) {
 	float[2] data = float[](FAR, 0);
 	
+	// SCENE BUILD
 	
-	float ground = p.y+10.;
-	if(ground < data[0]) {
-		data[0] = ground;
-		data[1] = 1.;
-	}
-	/*
-	vec3 spherePos = p-vec3(0, 1, 0);
-	float sphere = SignedSphereDistance(spherePos, 1.);
-	if(sphere < data[0]) {
-		data[0] = sphere;
-		data[1] = 2.;
-	}
-	*/
+	// GROUND
+
+		float ground = abs(p.y+10.)-0.015;
+		if(ground < data[0]) {
+			data[0] = ground;
+			data[1] = 1.;
+		}
 	
-	float osc = 0.1*sin(time*TAU/2500.);
-
-	vec3 spinnerPos = p;
-	spinnerPos.y += osc;
-	float spinner = SignedSphereDistance(spinnerPos, 1.);
-	if(spinner < data[0]) {
-		data[0] = spinner;
-		data[1] = 2.;
-	}
-
-	spinnerPos.xy *= rotationMatrix(time/700.);
-	spinnerPos.zy *= rotationMatrix(time/400.);
-	spinner = SignedTorusDistance(spinnerPos, 1.5, 0.1);
-	if(spinner < data[0]) {
-		data[0] = spinner;
-		data[1] = 3.;
-	}
-
-	spinnerPos.xy *= rotationMatrix(-6.*sin(time/1900.));
-	spinnerPos.zy *= rotationMatrix(time/1000.);
-	spinner = SignedTorusDistance(spinnerPos, 2., 0.1);
-	if(spinner < data[0]) {
-		data[0] = spinner;
-		data[1] = 3.;
-	}
+	// SPINNER
+		// BALL
+		vec3 spinnerPos = p;
+		spinnerPos.y += 0.1*sin(time*TAU*0.0004);
+		float spinner = sdfSphere(spinnerPos, 1.);
+		if(spinner < data[0]) {
+			data[0] = spinner;
+			data[1] = 2.;
+		}
+		// RINGS
+		spinnerPos.xy *= rotationMatrix(time*0.0014286);
+		spinnerPos.zy *= rotationMatrix(time*0.0025);
+		float ring = sdfTorus(spinnerPos, 1.5, 0.1);
+		if(ring < data[0]) {
+			data[0] = ring;
+			data[1] = 3.;
+		}
+		spinnerPos.xy *= rotationMatrix(-6.*sin(time*0.0005263));
+		spinnerPos.zy *= rotationMatrix(time*0.001);
+		ring = sdfTorus(spinnerPos, 2., 0.1);
+		if(ring < data[0]) {
+			data[0] = ring;
+			data[1] = 3.;
+		}
 	
-	return data;
+	// END SCENE
+
+	// performance gets mega bad when you intersect objects without a near plane
+	return float[](max(data[0], NEAR-length(p-cam)), data[1]); // NEAR PLANE
+	// return data; // NO NEAR PLANE
 }
 
 vec3 SurfaceNormal(in vec3 point) {
 	vec2 delta = vec2(0.0001, 0);
 	vec3 gradient = vec3(
-		SceneDistance(point - delta.xyy)[0],
-	    SceneDistance(point - delta.yxy)[0],
-	    SceneDistance(point - delta.yyx)[0]
+		sdf(point - delta.xyy)[0],
+	    sdf(point - delta.yxy)[0],
+	    sdf(point - delta.yyx)[0]
 	);
-  return normalize(SceneDistance(point)[0] - gradient);
+  return normalize(sdf(point)[0] - gradient);
 }
 
 void MarchScene(out float[2] hit, in vec3 ro, in vec3 rd) {
 	float[2] data; // 0: distance to scene  1: materialID
 	
 	for(hit[0] = 0.; hit[0] <= FAR;) {
-		data = SceneDistance(ro + rd*hit[0]);
+		data = sdf(ro + rd*hit[0]);
 
 		if(abs(data[0]) < HIT_DIST) 
 			break;
@@ -166,7 +166,7 @@ float calculateAO(vec3 p, vec3 n){
     
     for (float i=1.0; i<AO_SAMPLES+1.1; i++){
         d = i/AO_SAMPLES;
-        r += w*(d - SceneDistance(p + n*d)[0]);
+        r += w*(d - sdf(p + n*d)[0]);
         w *= 0.5;
     }
     
@@ -181,7 +181,6 @@ vec3 GlobalIllumination(in float[2] hit, in vec3 ro, in vec3 rd) {
 
 	vec3 ambient = AMBIENT_PERCENT, diffuse, specular;
 	for(int i = 0; i < pointLights.length(); i++) {
-		pointLights[i].pos.xz *= rotationMatrix(time*i*TAU*0.0004);
 		vec3 lightVector = pointLights[i].pos - point;
 		float lightDistance = length(lightVector);
 
@@ -227,19 +226,17 @@ vec3 randomVec3(in vec3 point) {
   return normalize(ret);
 }
 
-vec3 LookAt(){
+vec3 LookAt(vec2 uv){
   // a cross b = (aybz-azby, axbz-azbx, axby-aybx)
   vec3 r = normalize(cross(vec3(0, 1, 0), look));
   vec3 up = cross(r, look);
     
   return normalize((uv.x*r - uv.y*up)*FOV + look);
 }
-vec3 PixelColor() {
+vec3 PixelColor(vec2 uv) {
 	vec3 pixelColor;
 
-	// vec3 off = 0.002*randomVec3(vec3(randomVec2(seed), seed));
-
-	vec3 rd = LookAt();
+	vec3 rd = LookAt(uv);
 
 	float[2] hit; // 0: hit distance (-1 if no hit)  1: materialID
 	MarchScene(hit, cam, rd);
@@ -258,9 +255,13 @@ vec3 PixelColor() {
 }
 
 void mainImage(out vec3 pixelColor, in vec2 fragCoord) {
-	uv = (fragCoord - 0.5*res)/res.y;
+	vec2 uv = (fragCoord - 0.5*res)/res.y;
 
-	pixelColor += PixelColor();
+	// LIGHT POSITIONS
+	for(int i = 0; i < pointLights.length(); i++)
+		pointLights[i].pos.xz *= rotationMatrix(time*i*TAU*0.0004);
+
+	pixelColor += PixelColor(uv);
 }
 
 void main(){

@@ -22,6 +22,21 @@
 
 #define radians(degrees) degrees * 0.01745329251994329576923690768489
 
+/*
+CONTROLS:
+  2-5: control timeflow (-2x - 2x)
+  E: control timeflow (0x)
+
+  WASD: move forward/left/backward/right
+  LShift: move down
+  Space: move up
+
+  ARROWS: look up/left/down/right
+
+  LCTRL: 2x move speed
+  LALT: 0.25x move/look speed
+*/
+
 /******||UTILS||******/
 
 __int64 currentTimeMillis() {
