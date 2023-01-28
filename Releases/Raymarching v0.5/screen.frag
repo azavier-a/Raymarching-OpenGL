@@ -337,7 +337,7 @@ void surfcol(inout vec3 pixelColor, in vec3 ro, in vec3 rd) {
     if(mat.rough == 1.)
       break;
   }
-
+  
   if(bounces > 1)
     pixelColor /= float(bounces-1);
 }
