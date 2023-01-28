@@ -246,9 +246,7 @@ void input(GLFWwindow* window, double dT) {
 	float sp = SPEED * dT, cx = CAMX_SPEED * dT, cy = CAMY_SPEED * dT;
 
 	if (glfwGetKey(window, GLFW_KEY_LEFT_ALT) == GLFW_PRESS) {
-		sp *= 0.25;
-		cx *= 0.25;
-		cy *= 0.25;
+		sp *= 0.25;	
 	}
 	if (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS) {
 		sp *= 2.;
@@ -333,8 +331,8 @@ int main() {
 
 	unsigned int screen = LoadShaders("screen.vert", "screen.frag");
 	glUseProgram(screen);
-	
-	// auto launch = currentTimeMillis();
+
+	//auto launch = currentTimeMillis();
 	int time = 0;
 
 	// MAIN LOOP

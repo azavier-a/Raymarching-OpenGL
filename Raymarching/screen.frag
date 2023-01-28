@@ -1,33 +1,36 @@
 #version 330 core
 
-#define FOV 1.
+#define FOV 1.1
 
-#define BACKGROUND(dir) dir*0.5+0.5
+#define AA 2
 
 #define FAR 250.
 #define NEAR 0.2414
-#define HIT_DIST 0.01
+#define HIT 0.01
 
-#define AMBIENT_PERCENT vec3(0.03)
+#define AMBIENT_PERCENT vec3(0.005)
 
 #define AMBIENT 1.
 #define DIFFUSE 1.
-#define SPECULAR 1.
+#define SPECULAR 0.
 #define EMISSIVE 1.
 
 #define SPECULAR_FALLOFF 40.
 
-#define REFLECTIONS 1
+#define BOUNCES 5   
 
 #define FRE 0
 
 #define AO 1
-#define AO_SAMPLES 5.
+#define AO_SAMPLES 10.
 
 #define PI 3.141592
 #define TAU 6.283184
 
-out vec3 color;
+#define sat(a) clamp(a, 0., 1.)
+#define material(index) materials[index-1]
+
+out vec3 col;
 
 uniform vec2 res;
 uniform int time;
@@ -37,124 +40,184 @@ uniform vec3 cam;
 uniform vec3 look;
 
 struct Material {
-	vec3 albedo;
-	float roughness;
-	float metallicity;
-	float emissive;
+    vec3 albedo;
+    float rough;
+    float metal;
+    float light;
 } materials[] = Material[](
-	Material(vec3(1), 1., 1., 0.),
-	Material(vec3(0.6, 0, 0), 0., 0., 0.1),
-	Material(vec3(1), 0., 1., 0.02) // Spinny thing
+    Material(vec3(1), 1., 1., 0.),
+    Material(vec3(0.6, 0.01, 0.01), 1., 0., 0.1),
+    Material(vec3(1), 1., 1., 0.02), // Spinny thing
+    Material(vec3(0), 0., 5., 0.) 
 );
 
 struct PointLight {
-	vec3 pos;
-	vec4 col;
-	float radius;
-} pointLights[] = PointLight[](
-	PointLight(5.*vec3(sin(PI/3.), 2, cos(PI/3.)), vec4(0, 0, 1, 2), 120.),
-	PointLight(5.*vec3(sin(2.*PI/3.), 2, cos(2.*PI/3.)), vec4(1, 0, 0, 2), 120.),
-	PointLight(5.*vec3(0., 2, 1.), vec4(0, 1, 0, 2), 120.)
+    vec3 pos;
+    vec4 col;
+    float radius;
+} lights[] = PointLight[](
+    PointLight(5.*vec3(sin(PI/3.), 2, cos(PI/3.)), vec4(0, 0, 1, 2), 160.),
+    PointLight(5.*vec3(sin(2.*PI/3.), 2, cos(2.*PI/3.)), vec4(1, 0, 0, 2), 160.),
+    PointLight(5.*vec3(0., 2, 1.), vec4(0, 1, 0, 2), 160.)
 );
 
 mat2 rotationMatrix(in float angle) {
-	float s = sin(angle), c = cos(angle);
-	return mat2(c, -s, s, c);
+    float s = sin(angle), c = cos(angle);
+    return mat2(c, -s, s, c);
 }
+
+vec3 bgcol(in vec3 rd) {
+  rd.xz *= rotationMatrix(time*0.0005);
+  return 0.5*rd + 0.5;
+}
+
 float sdfSphere(in vec3 pos, in float r) { return length(pos) - r; }
 float sdfBox( vec3 p, vec3 s ) { 
-	p = abs(p)-s;
-	return length(max(p, 0.))+min(max(p.x, max(p.y, p.z)), 0.);
+    p = abs(p)-s;
+    return length(max(p, 0.))+min(max(p.x, max(p.y, p.z)), 0.);
 }
-float sdfRoundedBox(in vec3 worldDataP, in vec4 worldDataD) { return sdfBox(worldDataP, worldDataD.xyz - worldDataD.w) - worldDataD.w; }
 float sdfTorus(in vec3 p, in float r1, in float r2) { return length(vec2(length(p.xy)-r1,p.z))-r2; }
 float[2] sdf(in vec3 p) {
-	float[2] data = float[](FAR, 0);
-	
-	// SCENE BUILD
-	
-	// GROUND
+    float[2] data = float[](FAR, 0);
+    
+    // SCENE BUILD
+    
+    // GROUND
 
-		float ground = abs(p.y+10.)-0.015;
-		if(ground < data[0]) {
-			data[0] = ground;
-			data[1] = 1.;
-		}
-	
-	// SPINNER
-		// BALL
-		vec3 spinnerPos = p;
-		spinnerPos.y += 0.1*sin(time*TAU*0.0004);
-		float spinner = sdfSphere(spinnerPos, 1.);
-		if(spinner < data[0]) {
-			data[0] = spinner;
-			data[1] = 2.;
-		}
-		// RINGS
-		spinnerPos.xy *= rotationMatrix(time*0.0014286);
-		spinnerPos.zy *= rotationMatrix(time*0.0025);
-		float ring = sdfTorus(spinnerPos, 1.5, 0.1);
-		if(ring < data[0]) {
-			data[0] = ring;
-			data[1] = 3.;
-		}
-		spinnerPos.xy *= rotationMatrix(-6.*sin(time*0.0005263));
-		spinnerPos.zy *= rotationMatrix(time*0.001);
-		ring = sdfTorus(spinnerPos, 2., 0.1);
-		if(ring < data[0]) {
-			data[0] = ring;
-			data[1] = 3.;
-		}
-	
-	// END SCENE
+      float ground = abs(p.y+10.)-0.015;
+      if(ground < data[0]) {
+        data[0] = ground;
+        data[1] = 1.;
+      }
+    
+    // SPINNER
+      // BALL
+      vec3 spinnerPos = p;
+      spinnerPos.y += 0.1*sin(time*TAU*0.0004);
+      float spinner = sdfSphere(spinnerPos, 1.);
+      if(spinner < data[0]) {
+        data[0] = spinner;
+        data[1] = 2.;
+      }
+      // RINGS
+      spinnerPos.xy *= rotationMatrix(time*0.0014286);
+      spinnerPos.zy *= rotationMatrix(time*0.0025);
+      float ring = sdfTorus(spinnerPos, 1.5, 0.1);
+      if(ring < data[0]) {
+        data[0] = ring;
+        data[1] = 3.;
+      }
+      spinnerPos.xy *= rotationMatrix(-6.*sin(time*0.0005263));
+      spinnerPos.zy *= rotationMatrix(time*0.001);
+      ring = sdfTorus(spinnerPos, 2., 0.1);
+      if(ring < data[0]) {
+        data[0] = ring;
+        data[1] = 3.;
+      }
+    
+    // BOXES
+      vec3 boxpos = p - vec3(-9, 9, 0);
 
-	// performance gets mega bad when you intersect objects without a near plane
-	return float[](max(data[0], NEAR-length(p-cam)), data[1]); // NEAR PLANE
-	// return data; // NO NEAR PLANE
+      boxpos.xz *= rotationMatrix(PI/2.);
+      boxpos.zy *= rotationMatrix(PI/6.);
+
+      boxpos.y += 0.5*cos(time*0.003);
+
+      float box = sdfBox(boxpos, vec3(1.8+0.1*sin(TAU*boxpos.y+time*0.005), 2, 0.3))-0.2;
+      if(box < data[0]) {
+        data[0] = box*0.7;
+        data[1] = 4.;
+      }
+
+      boxpos = p - vec3(9, 9, 0);
+
+      boxpos.xz *= rotationMatrix(-PI/2.);
+      boxpos.zy *= rotationMatrix(PI/6.);
+
+      boxpos.y += 0.5*sin(time*0.003);
+
+      box = sdfBox(boxpos, vec3(1.8+0.1*sin(TAU*boxpos.y+time*0.005), 2, 0.3))-0.2;
+      if(box < data[0]) {
+        data[0] = box*0.7;
+        data[1] = 4.;
+      }
+
+      boxpos = p - vec3(0, 9, -9);
+
+      boxpos.zy *= rotationMatrix(PI/6.);
+
+      boxpos.y -= 0.5*cos(time*0.003);
+
+      box = sdfBox(boxpos, vec3(1.8+0.1*sin(TAU*boxpos.y+time*0.005), 2, 0.3))-0.2;
+      if(box < data[0]) {
+        data[0] = box*0.7;
+        data[1] = 4.;
+      }
+
+      boxpos = p - vec3(0, 9, 9);
+
+      boxpos.zy *= rotationMatrix(-PI/6.);
+
+      boxpos.y -= 0.5*sin(time*0.003);
+
+      box = sdfBox(boxpos, vec3(1.8+0.1*sin(TAU*boxpos.y+time*0.005), 2, 0.3))-0.2;
+      if(box < data[0]) {
+        data[0] = box*0.7;
+        data[1] = 4.;
+      }
+
+    // END SCENE
+
+    // performance gets mega bad when you intersect objects without a near plane
+    return float[](max(data[0], (NEAR-length(p-cam)*0.9)), data[1]); // NEAR PLANE
+    // return data; // NO NEAR PLANE
 }
 
-vec3 SurfaceNormal(in vec3 point) {
-	vec2 delta = vec2(0.0001, 0);
-	vec3 gradient = vec3(
-		sdf(point - delta.xyy)[0],
-	    sdf(point - delta.yxy)[0],
-	    sdf(point - delta.yyx)[0]
-	);
+vec3 normal(in vec3 point) {
+    vec2 delta = vec2(0.001, 0);
+    vec3 gradient = vec3(
+        sdf(point - delta.xyy)[0],
+        sdf(point - delta.yxy)[0],
+        sdf(point - delta.yyx)[0]
+    );
   return normalize(sdf(point)[0] - gradient);
 }
-
-float[2] trace(in vec3 ro, in vec3 rd) {
-	float dist = 0.;
-	
-	for(dist = 0.; dist < FAR;) {
-		float[2] data = sdf(ro + rd*dist);
-
-		if(abs(data[0]) < HIT_DIST) 
-			return float[2](dist, data[1]); // 0: distance to scene along ray  1: materialID
-
-		dist += data[0];
-	}
-	return float[2](-1., 0.);
+vec3 normal(in vec3 point, in float d) {
+    vec2 delta = vec2(0.001, 0);
+    vec3 gradient = vec3(
+        sdf(point - delta.xyy)[0],
+        sdf(point - delta.yxy)[0],
+        sdf(point - delta.yyx)[0]
+    );
+  return normalize(d - gradient);
 }
 
-Material getMaterial(int index) {
-	return materials[index-1];
+float[3] trace(in vec3 ro, in vec3 rd) {
+    float dist = 0.;
+    
+    float[2] data;
+    for(dist = 0.; dist < FAR;) {
+        data = sdf(ro + rd*dist);
+
+        if(abs(data[0]) < HIT) 
+            break;
+
+        dist += data[0];
+    }
+    return float[3](dist, data[1], data[0]); // 0: distance to scene along ray  1: materialID
 }
 
-void getTexelColor(inout vec3 albedo, in float[2] hit, in vec3 ro, in vec3 rd) {
-	vec3 point = ro + rd*hit[0];
-	switch(int(hit[1])) {
-		case 0:
-			break;
-		case 1:
-			point.xz *= rotationMatrix(PI/4.);
-			albedo = getMaterial(1).albedo*(0.5+0.5*ceil(clamp(vec3(sin(1.5*point.x)+sin(1.5*point.z)), 0., 1.)));
-			break;
-		default:
-			albedo = getMaterial(int(hit[1])).albedo;
-			//albedo = SurfaceNormal(point)*0.5+0.5;
-			break;
-	}
+vec3 getTexel(in int matID, in Material mat, in vec3 p) {
+    switch(matID) {
+        case 0:
+            return vec3(0);
+        case 1:
+            p.xz *= rotationMatrix(PI/4.);
+            return material(1).albedo*(0.5+0.5*ceil(clamp(vec3(sin(1.5*p.x)+sin(1.5*p.z)), 0., 1.)));
+        default:
+            return material(matID).albedo;
+            //return normal(p)*0.5+0.5;
+    }
  }
 
 float calculateAO(vec3 p, vec3 n){
@@ -169,57 +232,113 @@ float calculateAO(vec3 p, vec3 n){
     return 1.0-clamp(r,0.0,1.0);
 }
 
-vec3 GlobalIllumination(in float[2] hit, in vec3 ro, in vec3 rd) {
-	vec3 point = ro + rd*hit[0];
-	vec3 normal = SurfaceNormal(point);
+vec3 lighting(in Material mat, in vec3 texel, in vec3 ro, in vec3 p, in vec3 n) {
+    vec3 ambient = AMBIENT_PERCENT, diffuse, specular;
+    for(int i = 0; i < lights.length(); i++) {
+        vec3 lightVector = lights[i].pos - p;
+        float lightDistance = length(lightVector);
 
-	Material mat = getMaterial(int(hit[1]));
+        if(lightDistance > lights[i].radius + length(lights[i].pos - ro)) continue;
 
-	vec3 ambient = AMBIENT_PERCENT, diffuse, specular;
-	for(int i = 0; i < pointLights.length(); i++) {
-		vec3 lightVector = pointLights[i].pos - point;
-		float lightDistance = length(lightVector);
+        lightVector = normalize(lightVector);
 
-		if(lightDistance > pointLights[i].radius + length(pointLights[i].pos - ro)) continue;
+        float attenuation = 1./(lightDistance*0.5);
 
-		lightVector = normalize(lightVector);
+        ambient += lights[i].col.rgb*attenuation;
+        diffuse += lights[i].col.rgb*sat(dot(n, lightVector))*lights[i].col.a*attenuation;
 
-		float attenuation = 1./lightDistance;
+        vec3 halfway = normalize(normalize(ro - p) + lightVector);
+        float specularIntensity = pow(sat(dot(n, halfway)), max(mat.metal*SPECULAR_FALLOFF, 1.));
+        specular += lights[i].col.rgb*lights[i].col.a*specularIntensity*attenuation;
+    }
+    specular = sat(specular);
 
-		ambient += pointLights[i].col.rgb*attenuation	;
-		diffuse += pointLights[i].col.rgb*dot(normal, lightVector)*pointLights[i].col.a*attenuation;
+    float occ = 1.;
+    if(AO == 1) 
+        occ = calculateAO(p, n);
 
-		vec3 halfway = normalize(normalize(ro - point) + lightVector);
-		float specularIntensity = pow(clamp(dot(normal, halfway), 0., 1.), max(mat.metallicity*SPECULAR_FALLOFF, 1.));
-		specular += pointLights[i].col.rgb*pointLights[i].col.a*specularIntensity*attenuation;
-	}
-	specular = clamp(specular, 0., 1.);
-
-	float occ = 1.;
-	if(AO == 1) 
-		occ = calculateAO(point, normal);
-
-	vec3 global = AMBIENT*ambient + DIFFUSE*diffuse + SPECULAR*specular + EMISSIVE*mat.emissive;
-	return mat.albedo*global*occ;
+    vec3 global = AMBIENT*ambient + DIFFUSE*diffuse + SPECULAR*specular + EMISSIVE*mat.light;
+    return texel*global*occ;
 }
 
+float Hash11(float hash) {
+    return (fract(sin((hash)*114.514)*1919.810));
+}
+float randomseed;
+float rand() {
+    randomseed++;
+    return Hash11(randomseed);
+}
 float Hash21(in vec2 hash) {
   vec2 p = fract(hash*vec2(25.124, 85.124));
   p += dot(p, p + 234.124);
   return fract(p.x * p.y);
 }
 vec2 randomVec2(in float hash) {
-	vec2 ret;
-	ret.x = Hash21(vec2(hash, -hash));
-	ret.y = Hash21(vec2(ret.x*ret.x, hash));
-	return normalize(ret);
+    vec2 ret;
+    ret.x = Hash11(hash);
+    ret.y = Hash11(ret.x);
+    return normalize(ret);
+}
+vec3 randomVec3(in float hash) {
+  vec3 ret;
+  ret.x = Hash11(hash);
+  ret.y = Hash11(ret.x);
+  ret.z = Hash11(ret.y);
+  return normalize(ret);
 }
 vec3 randomVec3(in vec3 point) {
   vec3 ret;
-  ret.x = Hash21(vec2(point.x * point.y, point.z * point.y));
-  ret.y = Hash21(vec2(point.x * point.z, point.y * point.x));
-  ret.z = Hash21(vec2(point.y * point.z, point.z * point.y));
+  ret.x = Hash11(point.x * point.z);
+  ret.y = Hash11(ret.x * point.y);
+  ret.z = Hash11(ret.y * point.x);
   return normalize(ret);
+}
+
+vec3 bounce(out Material mat, inout float[3] hit, inout vec3 ro, inout vec3 rd) {
+  vec3 bg = bgcol(rd);
+  
+  hit = trace(ro, rd);
+  if(hit[0] > FAR)
+    return bg;
+
+  mat = material(int(hit[1]));
+
+  vec3 hitp = ro + rd*hit[0];
+  vec3 n = normal(hitp, hit[2]);
+
+  vec3 texCol = getTexel(int(hit[1]), mat, hitp);
+
+  if(mat.rough == 1.) {
+    texCol *= lighting(mat, texCol, ro, hitp, n);
+
+    //GAMMA CORRECTION
+    //texCol = sqrt(sat(texCol));
+    //BG FOG
+    texCol = mix(texCol, bg, smoothstep(0., FAR*FAR, hit[0]*hit[0]));
+  }
+
+  ro = hitp;
+  ro += n*HIT;
+
+  rd = reflect(rd, n);
+  return texCol;
+}
+
+void surfcol(inout vec3 pixelColor, in vec3 ro, in vec3 rd) {
+  float[3] hit;
+  int bounces;
+
+  for(bounces; hit[0] < FAR && bounces < BOUNCES;) {
+    Material mat;
+    pixelColor += bounce(mat, hit, ro, rd);
+
+    bounces++;
+    if(mat.rough == 1.)
+      break;
+  }
+
+  pixelColor /= float(bounces);
 }
 
 vec3 LookAt(vec2 uv){
@@ -230,40 +349,29 @@ vec3 LookAt(vec2 uv){
   return normalize((uv.x*r - uv.y*up)*FOV + look);
 }
 vec3 PixelColor(vec2 uv) {
-	vec3 pixelColor;
+  vec3 pixelColor;
 
-	vec3 rd = LookAt(uv);
+  vec3 rd = LookAt(uv);
 
-	float[2] hit = trace(cam, rd); // 0: hit distance (-1 if no hit)  1: materialID
-	
+  surfcol(pixelColor, cam, rd);
 
-	vec2 bdir = rd.xz*rotationMatrix(time*0.0005);
-	vec3 bgCol = BACKGROUND(vec3(bdir.x, rd.y, bdir.y));
-
-	if(hit[0] > 0.) {
-		getTexelColor(pixelColor, hit, cam, rd);
-		pixelColor *= GlobalIllumination(hit, cam, rd);
-	} else return bgCol;
-
-	pixelColor = mix(pixelColor, bgCol, smoothstep(10., FAR, hit[0])); // backgroud fog
-
-	return pixelColor;
+  return pixelColor;
 }
 
 void mainImage(out vec3 pixelColor, in vec2 fragCoord) {
-	vec2 uv = (fragCoord - 0.5*res)/res.y;
+  vec2 uv = (fragCoord - 0.5*res)/res.y;
 
-	// LIGHT POSITIONS
-	for(int i = 0; i < pointLights.length(); i++)
-		pointLights[i].pos.xz *= rotationMatrix(time*i*TAU*0.0004);
-
-	pixelColor += PixelColor(uv);
+  // SPINNING LIGHTS
+  for(int i = 0; i < lights.length(); i++)
+    lights[i].pos.xz *= rotationMatrix(time*i*TAU*0.0004);
+  
+  pixelColor += PixelColor(uv);
 }
 
 void main(){
-	vec3 pixelColor;
+  vec3 pixelColor;
 
-	mainImage(pixelColor, gl_FragCoord.xy);
+  mainImage(pixelColor, gl_FragCoord.xy);
 
-	color = sqrt(clamp(pixelColor, 0., 1.)); // Light gamma correction
+  col = pixelColor;
 }
