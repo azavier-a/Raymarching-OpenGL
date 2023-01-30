@@ -92,6 +92,21 @@ float sdfBox( vec3 p, vec3 s ) {
     return length(max(p, 0.))+min(max(p.x, max(p.y, p.z)), 0.);
 }
 float sdfTorus(in vec3 p, in float r1, in float r2) { return length(vec2(length(p.xy)-r1,p.z))-r2; }
+float sdfRhombicIcos(in vec3 p, in float r) {
+  float c = cos(PI/5.), s = sqrt(0.75-c*c);
+  vec3 n = vec3(-0.5, -c, s);
+
+  p = abs(p);
+  p -= 2.*min(0., dot(p, n))*n;
+
+  p.xy = abs(p.xy);
+  p -= 2.*min(0., dot(p, n))*n;
+
+  p.xy = abs(p.xy);
+  p -= 2.*min(0., dot(p, n))*n;
+
+  return p.z-1.;
+}
 float[2] sdf(in vec3 p) {
   float[2] data = float[](FAR, 0);
     
@@ -156,6 +171,14 @@ float[2] sdf(in vec3 p) {
       data[1] = 6.;
     }
 
+  // RHOMBIC ICOSAHEDRON
+    vec3 icosp = p - vec3(0, 10, 0);
+    icosp.xz *= rotationMatrix(time*0.001);
+    float icos = sdfRhombicIcos(icosp, 1.);
+    if(icos < data[0]) {
+      data[0] = icos;
+      data[1] = 6.;
+    }
   // END SCENE
 
   // performance gets mega bad when you intersect objects without a near plane. Also the near plane is fun and quirky.
@@ -290,7 +313,7 @@ vec3 randomVec3(in vec3 point) {
 void refractt(inout Ray ray) {
   ray.hitn = normal(ray.hitp);
   
-  ray.ro = ray.hitp - ray.hitn*HIT*3.;
+  ray.ro = ray.hitp - ray.hitn*HIT*4.;
   vec3 rdent = refract(ray.rd, ray.hitn, 1./ray.mat.iref);
   
   float dI = trace(ray.ro, rdent, STEPS, -1.)[0];
@@ -301,11 +324,11 @@ void refractt(inout Ray ray) {
   ray.rd = refract(rdent, ray.hitn, ray.mat.iref);
   if(ray.rd.x*ray.rd.x + ray.rd.y*ray.rd.y + ray.rd.z*ray.rd.z == 0.) {
     ray.rd = reflect(rdent, ray.hitn);
-    dI = trace(ray.ro+ray.hitn*HIT*3., ray.rd, STEPS, -1.)[0];
+    dI = trace(ray.ro+ray.hitn*HIT*4., ray.rd, STEPS, -1.)[0];
     ray.ro += ray.rd*dI;
     ray.hitn = -normal(ray.ro);
   }
-  ray.ro -= ray.hitn*HIT*3.;
+  ray.ro -= ray.hitn*HIT*4.;
 }
 
 vec3 bounce(inout Ray ray) {
