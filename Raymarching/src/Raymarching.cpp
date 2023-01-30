@@ -286,6 +286,7 @@ void input(GLFWwindow* window, double dT) {
 		fwd.x = cos(radians(yaw)) * cos(radians(pitch));
 		fwd.z = sin(radians(yaw)) * cos(radians(pitch));
 		fwd = normalize(fwd);
+		up = cross(fwd, normalize(cross(glm::vec3{ 0.0f,1.0f,0.0f }, fwd)));
 	}
 	if(glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS) {
 		yaw += cx;
@@ -293,6 +294,7 @@ void input(GLFWwindow* window, double dT) {
 		fwd.x = cos(radians(yaw)) * cos(radians(pitch));
 		fwd.z = sin(radians(yaw)) * cos(radians(pitch));
 		fwd = normalize(fwd);
+		up = cross(fwd, normalize(cross(glm::vec3{ 0.0f,1.0f,0.0f }, fwd)));
 	}
 
 	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
