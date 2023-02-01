@@ -82,8 +82,24 @@ mat2 rotationMatrix(in float angle) {
 }
 
 vec3 bgcol(in vec3 rd) {
-  rd.xz *= rotationMatrix(time*0.0005);
-  return 0.5*rd + 0.5;
+  //rd.xz *= rotationMatrix(time*0.0005);
+  //return 0.5*rd + 0.5;
+
+  vec3 skyc = vec3(0.15,0.51,0.91);
+  vec3 horizon = vec3(0.63,0.78,0.91);
+  vec3 ground = vec3(0.27,0.34,0.40);
+  ground = mix(ground, vec3(0.07,0.14,0.20), smoothstep(0.1, 1., -rd.y));
+
+  vec3 sky = mix(horizon, skyc, smoothstep(0.05, 0.7, rd.y+sat(sin(rd.y*rd.x*rd.z+time*0.001))));
+  
+  vec3 bg = mix(ground, sky, smoothstep(0., 0.02, rd.y));
+  bg *= mix(vec3(1), 1.4*horizon, smoothstep(0.1, 0., abs(rd.y)));
+  
+  vec3 sunp = normalize(vec3(0.4,0.5,-1));
+  
+  bg += mix(vec3(0), 2.*horizon, smoothstep(0.995, 1., dot(rd, sunp)));
+  
+  return bg;
 }
 
 float sdfSphere(in vec3 pos, in float r) { return length(pos) - r; }
@@ -370,7 +386,7 @@ void surfcol(inout vec3 pixelColor, in Ray ray) {
     pixelColor += bounce(ray);
 
   if(ray.bounces > 1)
-    pixelColor /= float(ray.bounces);
+    pixelColor /= float(ray.bounces-1);
 }
 
 vec3 LookAt(vec2 uv){
